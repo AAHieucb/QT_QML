@@ -1,0 +1,51 @@
+-> Qt dùng cross compiler, 1 loại compiler có thể tạo ra executable code chạy trên 1 nền tảng khác. 
+VD: Cross-compiler của Qt giúp compiler source code viết trên window ra file exe chạy trên android -> compile 1 thiết bị, chạy trên 1 thiết bị và hđh khác.
+
+-> Cách tải Qt: vào trang tải-> chọn open source-> kéo dưới cùng-> download Qt installer. Kbh đc ấn nhầm vào try k là ăn cứt luôn, mất mẹ tài khoản free.
+
+-> Lập trình android:
+NDK (Native Development Kit) giúp code C/C++ trong Android. Nhờ nó mà ta quản lý các hoạt động của thiết bị, truy cập vào các bộ phận vật lý của máy như cảm biến, màn hình cảm ứng. NDK được phát triển phục vụ cho các xử lý phức tạp cải thiện hiệu suất của CT như tăng tốc độ phần cứng, giảm độ trễ, sử dụng lại các thư viện được viết bằng C++ => Nếu k có các nhu cầu tăng tốc hay dùng C++ trong android thì NDK thg k phù hợp với developer sử dụng các API đc android SDK cung cấp.
+SDK(Software Development Kit) như ta đã biết cung các thư viện, template, tài liệu các thứ để phát triển ứng dụng qua 1 nền tảng nhất định.
+JDK(Java Development Kit) cung môi trường phát triển ứng dụng viết bằng java (java là cho lập trình android đó). Khi dùng java phải tải các JDK phù hợp muốn dùng
+=> VD để dùng 1 ngôn ngữ nào đó cho lập trình android, ta có thể phải tải cả 3 bộ công cụ đó và apply vào IDE android studio để code.
+
+-> Gradle là 1 công cụ tự động hóa quá trình build và quản lý các thư viện giúp tối ưu công đoạn biên dịch và đóng gói. VD: Nó sẽ thực thi hết tất cả các task và tổng hợp toàn bộ các lỗi gặp phải trong một lần đóng gói. Dev sẽ không phải chờ đợi quá lâu để build và gặp lỗi, sửa lỗi và build lại. Các phiên bản cũ như Ant và Maven.
+Sau khi có SDK ta có thể xác định các version android muốn dùng với SDK platform của android đó và system image tùy từng loại(có 4 loại x86, x86_64, armv8a armv7).
+
+-> Splash screen là 1 màn hình đặc biệt hiển thị vài giây đầu tiên khi mở ứng dụng, kiểu hiện logo ứng dụng ấy. Ng ta thg dùng nó để lấp đầy khoảng loading ở đầu app, tranh thủ các thao tác background như download thông tin, đọc văn bản dài.
+
+-> Setup Qt for android:
+Tải VSC-> tải droid info về điện thoại để xác định được platform của SDK, instruction Sets, phiên bản android (VD máy xiaomi android 10, arm64-v8a, SDK platform 29)-> trong SDK Platform tải về Android SDK Platform 29 và Google APIs ARM 64 v8a System Image (cái này có thể k có ở phiên bản android 10) -> trong SDK Tools tải về tools cần cho Qt là 30.0.2 (về sau chạy nó tự cài thêm 28.0.3 cần thiết) -> tải phiên bản ndk tương thích mà qt cần là 21.3.6528147-> tải Android SDK Command-line Tools(latest), Android SDK Platforms-Tools, Google USB Driver, Intel x86 Emulator Accelerator(HAXM installer) -> cắm điện thoại vào máy tính bật USB Debugging, install via USB và cả USB Debugging(Security settings) -> build app and deploy app.
+
+-> Felgo xây trên QML, xây 1 phát cho cả iOS và Android luôn. Thường dùng Felgo lo UI, Qt C++ cho logic core.
+Dùng V-play như 1 plugin của Qt Creator: Tải về trong v-play.net -> install vào máy. 
+Ta có thể tạo game or tạo app vì v-play xuất phát từ game community, nó cho phép ta dùng các ứng dụng animation của game vào tạo app nên ra hiệu ứng đẹp. 
+Felgo hỗ trợ trên real device: Tải trên máy QML Live Scripting by Felgo -> bật app và kết nối cùng wifi với máy tính chạy felgo. 
+property bindings là tính năng khi 1 thuộc tính thay đổi thì các cái liên quan cũng tự đổi
+Với các thay đổi phức tạp, có thể dùng MVC và cơ chế tương tự như Flux. Flux là kiểu tác động vào view, phát action gửi đến dispatcherxử lý,
+
+
+
+# qmake
+File pro và lệnh qmake tương tự Makefile và make của mingw. Qt commandprompt thay thế cmd.
+
+Luồng: Nhét file pro và các file .cpp, .h vào cùng 1 folder -> chạy qmake <tên file pro> sẽ tạo ra Makefile và các thư mục debug, release, file stash cần thiết dể tạo ra file thực thi -> mingw32-make chính là hàm make chạy vào Makefile tạo ra từ .pro thực hiện các rule, tạo ra file thực thi.
+Thực chất hàm khi ta cài gcc vào ubuntu thì nó tạo ra file gọi là make.exe, và cái file này đc cài làm biến môi trường nên ta có thể dùng nó như 1 lệnh bất cứ lúc nào để gọi chạy make.exe Ở đây ta cài mingw32 cho qt thì nó sẽ ở dạng file mingw32-make.exe nên phải gọi mingw32-make or mingw32-make.exe mới đc.
+=> Ta k dùng đc hàm make trong commandPrompt vì nó k cài mingw. Nếu ta cài mingw thì ta sẽ specific đc cái file mingw32-make.exe, vào trong control panel -> advanced system setting -> nhét cái thư mục chứa file exe đó vào trong biến môi trường của hệ điều hành -> thế là dùng đc mingw32-make. Có thể chuyển nó thành make bằng lệnh copy <link đến file mingw32-make.exe> <link đến thư mục đó\make.exe>
+
+Biến MT có vai trò là giá trị đường dẫn sử dụng khi ta gõ lệnh trong cmd. Ví dụ trong window cho ta các biến môi trường mặc định như %ProgramFiles%, %ProgramFiles(x86)%, %SystemDrive%, $windir$, %USERNAME%,%HOMEPATH% có thể tự thêm vào để dùng
+
+VD: CONFIG+=c++11 console #là dùng C++11
+CONFIG+=release #compile ra theo debug hay release
+Biến MT TARGET trong file pro giống TARGET trong make file là tên app. Nếu build app với TARGET xong đổi TARGET và build lần nữa thì sẽ tạo ra 2 app mà app cũ k bị xóa
+TEMPLATE+=subdirs
+CONFIG+=ordered 
+SUBDIRS += Libs
+SUBDIRS += Applications
+SUBDIRS += Plugins
+=> VD có nhiều subdirs và ta compile cả dự án thì nó sẽ compile theo thứ tự các subdirs ta add theo thứ tự vào project như trên
+
+$PWD (hay $$PWD dùng trong đường link) là print working directory tức in ra đường dẫn thư mục làm vc hiện tại
+$$quote(<thứ muốn đưa vào trong cặp "" thì nhét vào như này>)
+
+

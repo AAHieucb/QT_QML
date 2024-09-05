@@ -1,0 +1,78 @@
+QML (Qt Modeling Language)
+Dùng mô tả giao diện CT. HTML có CSS thì Qt có QML.
+QtQuick là thư viện giúp code với ngôn ngữ QML, hỗ trợ mobile. Còn Felgo chỉ là 1 third-party sử dụng qml.
+QML là FE tạo giao diện người dùng, còn C++ là BE. VD ta k nên xử lý logic như encryption chẳng hạn ở front end mà nên dùng C++ để làm. 
+VD: ta có 1 model xử lý dữ liệu ở backend C++ và dùng QML để hiển thị dạng bảng or chart,.. Nhưng qml rất mạnh, nếu thích có thể xử lý model ở front end luôn nếu thích vì qml hỗ trợ code js mà
+
+
+
+# Basic
+-> Setup: Tạo ra 1 file .qml rồi dùng file đó trong project, để sử dụng file .qml kia như 1 giao diện thôi.
+Thêm QT+=quick vô pro file
+Nhét file qml đó vào resource file và sử dụng
+Dùng: import QtQuick 2.15
+import QtQuick.Window 2.15
+Tạo ra các object bằng cú pháp: <tên object>{<thuộc tính>: "<giá trị>"}
+
+-> CTRL+I = RightClick + auto indent
+
+
+
+# Dùng C++ function trong qml
+Tạo class C++ gọi trong main -> tạo biến QScopedPointer cấp phát động class đó -> gọi: engine.rootContext()->setContextProperty("<tên thuộc tính>",<tên biến>.data()); sau khi set file qml cho nó -> vào class tạo ra các hàm với Q_INVOKABLE -> trong file qml gọi <tên thuộc tính>.<tên hàm> 
+=> Có nhiều cách connect và cách này là dùng class qt C++ như 1 thuộc tính của qml, tức là 1 biến v
+
+Hàm rootContext sẽ lấy QQmlContext là root context của engine
+contextProperty là 1 thuộc tính của QQmlContext(qml có 1 context riêng)
+
+
+
+# Hiển thị text
+TextArea thuộc thư viện QtQuick.Controls
+
+-> Phân biệt 5 loại: TextField, TextInput, TextEdit, TextArea, Text
+- TextInput thì y hệt LineEdit nhưng nó k có viền nên phải lồng ở ngoài 1 rectangle.
+- TextField cx là 1 dòng như TextInput nhưng có sẵn khung. Cả 2 có thể dùng để gõ password. 
+=> Cái TextInput nếu ta viết dài hơn cái rectangle nó sẽ tràn ra ngoài rất xấu, nên thế hoàn toàn bằng TextField
+- Text là hiển thị 1 dòng formatted text, có thể set font hay cỡ chữ, hiển thị html.
+- TextArea hiển thị editable text nhiều dòng. Nó k có khung và scrollbar ở các phiên bản mới nhưng nếu dùng phiên bản cũ là 1.3 thì sẽ có tự khung và scrollbar nhưng rất xấu. Để dùng tốt ở phiên bản mới nhất thì phải cho vào trong 1 rectangle + scrollview. 
+- TextEdit y hệt như textArea thậm chí còn kém hơn. Nó cx k có viền và scrollbar
+=> Nên dùng hoàn toàn textArea
+
+
+
+# Other
+-> Deploy app cần làm 2 thứ: tạo file apk có key -> tạo được thì điện thoại nào tải file apk đó đều chạy đc -> gửi file apk đó lên CHPlay tài khoản dành cho developer. Để có tài khoản dành cho developer cần đóng phí là 25 đô. Phần này dành cho đội đầu ra lo, ta chỉ cần tạo được file apk là đc.
+Khi dùng felgo, ta có 1 cách khác để deploy app cực nhanh, nó hỗ trợ cloud build cho phép ta build sang các loại hệ điều hành trực tuyến: Đảm bảo code chạy được ngon trên live server -> upload code lên 1 nhánh của github -> mở https://felgo.com/cloud-builds (phải có tài khoản github và felgo) -> new project -> gửi url của github, vị trí file pro nếu không ở trong thư mục đó luôn, chọn dạng clone (để là https, nếu dùng SSH thì copy khóa của cloud build vào trong github mới đc), chọn đúng nhánh, dùng các tùy chọn khác nếu muốn -> new build from git -> chọn các loại build hệ điều hành mong muốn -> chờ kết quả.
+Lỗi khi build FailToGetFullPathName của compileDebugAidl thực ra là do tên path name quá dài mà thôi. 
+Cách khác là build trong Qt Creator, nhưng cx chỉ ra được debug, để build được release thì cần Keystore: Tạo key store bằng Qt creator -> project -> build settings -> build android APK -> KeyStore -> Create...
+1 ứng dụng sẽ cần 1 cái KeyStore và 1 cái Cerfiticate: Cái Cerfiticate là chứng chỉ chứa khóa công khai và thông tin về người sở hữu. KeyStore là thứ ta cần khi update ứng dụng đã tải lên và cần để bảo mật các thông tin trong app khi sử dung.
+Sau này có thể dùng nó để lưu các thông tin mong muốn. Ta cần sign cái app với cái key, nó sẽ sinh ra 1 file.keystore, file này là thứ cần lưu lại để cập nhập về sau
+
+-> Cách thu nhỏ app: trong android studio thì thu nhỏ app với proguard tool nhưng trong qt thì éo làm đc, ta chỉ có cách reduce các file asset để giảm dung lượng, compile ra file aab để gg play giảm dung lượng hộ, dùng android studio để build analyze cái file apk or aab đó, khi đó ta có thể xóa đi 1 vài lib k cần thiết nếu chắc chắn. Hiện h k có cách nào khác để reduce qt, sở dĩ kích thước nó lớn vì nó tự động thêm các lib mặc dù ta k dùng tới làm app phình to ra.
+
+Setting app: Khi dùng felgo nó đã tạo sẵn các file manifest và gradle.build r. Nếu k có thì trong project phải create template ra những file đó. Trong file manijest cần chỉnh sửa minimum required SDK và target SDK, version, name, icon, permission. Chỉnh sửa chúng cả trong file pro nx.
+
+Sau khi compile sẽ ra 1 file apk or aab trong thư mục, chỉ cần file đó để gửi lên gg play
+
+-> Các cách lấy dữ liệu từ 1 website: 
+1) Ta có thể crawl data từ website -> lưu vào chính cơ sở dữ liệu của ta -> dùng data từ cơ sở dữ liệu đó -> vc này có thể bị chặn bằng captcha
+2) Ta có thể dùng web service, chính là các giao thức HTTP qua API. Tuy nhiên để làm đc điều này cần phải biết API của website là gì, biết các giao thức GET POST gửi đi cái gì và nhận đc json hay xml như thế nào để sử dụng
+3) Nếu trang web mà có RSS thì có thể crawl dữ liệu RSS của trang web.
+4) Mò được API của 1 web nhờ vào việc bắt được các gói tin truyền đi và về => chưa đủ trình vì tab network nó éo đúng đâu
+
+-> WordPress API: VD trang lovehand ta gọi GET API các trang sau
+https://lovehands.vn/wp-json/wp/v2/ => ra các route ta có thể get đc
+https://lovehands.vn/wp-json/wp/v2/posts => ra các post, mặc định của wordpress là 10 posts 1 page
+https://lovehands.vn/wp-json/wp/v2/posts?page=2 => ra 10 post tiếp theo từ 10 đến post thứ 20 -> làm kiểu loading ấy
+https://lovehands.vn/wp-json/wp/v2/posts?per_page=99 => ra max là 99 posts luôn chứ k còn 10 post nx
+https://lovehands.vn/wp-json/wp/v2/posts/:id => ra 1 post cụ thể có id nào
+https://lovehands.vn/wp-json/wp/v2/posts?slug=cay-thong-dat => ra 1 post có slug là gì, slug là 1 cái giống tiêu đề nhưng dù sao ta cx chả kiểm soát đc
+https://lovehands.vn/wp-json/wp/v2/posts?categories=141&per_page=99 => max 99 posts có chuyên mục có id là 141. Vì các posts trong wordpress chia theo chuyên mục
+https://lovehands.vn/wp-json/wp/v2/categories => ra list các categories
+https://lovehands.vn/wp-json/wp/v2/categories?slug=giai-tri => ra categories có slug là giai-tri -> kp post nên k xem đc nội dung nhưng có thể lấy đc id
+https://lovehands.vn/wp-json/wp/v2/categories/:id => ra categories có id là cái kia
+
+-> RapidAPI là 1 trang web cung cấp các chức năng api. VD ta muốn chuyển văn bản thành giọng nói có thể search text-to-speech api có sẵn và dùng luôn -> gửi dữ liệu đi xong nhận về file giọng nói chẳng hạn. Để dùng nhiều api yêu cầu api key or token ta phải vào trang web của họ để tìm hiểu cái đó. 
+
+

@@ -1,0 +1,284 @@
+# Banner Grabbing
+1 kỹ thuật gửi bad request để lấy thông tin về 1 hệ thống máy tính trên mạng và các dịch vụ đang chạy trên cổng mở của nó, có thể lấy đc thông tin về server, phiên bản.
+Có hẳn tool riêng để làm vc này. Để làm vc này TT trên window: control panel -> programs -> turn window features on or off -> bật telnet client -> mở commandPrompt -> telnet -> open <tên web(k có http vd: www.google.com)> 80 -> chờ 1 lát ấn CTRL+C để lấy thông tin. 
+Lỗi bad request 400 xuất hiện khi gửi tới máy chủ trang web 1 yêu cầu k chính xác khiến máy chủ k hiểu đc sẽ trả ra lỗi đó.
+
+Telnet: là hệ thống giúp kết nối với các ứng dụng từ xa. Bật telnet client trên window cho phép ta kết nối gửi request bất kỳ tới bất cứ 1 server nào với syntax: open <tên ip của server> <số cổng kết nối>, với các server tự tạo ta có thể dùng số công bất kỳ từ 1024 đến 65535 còn nếu kết nối với server internet thì dùng port 80
+Mặc định là dùng giao thức TCP để trao đổi dữ liệu.
+
+
+
+# Concurrency 
+Concurrency là một từ chỉ multi task đc thực hiện 1 lúc:
+synchronous multi-thread: T1/T2/T3/T4
+synchronous single-thread:T1T2T3T4
+asynchronous single-thread:T4T1T2T4T1T3
+asynchronou multi-thread:T4T1T2T4T1T3/T2T3T2T4/T1T2T3T4T1T2
+
+(vui): Trong lịch sử phát triển máy tính, khối lượng công việc lớn nhất mà máy tính có thể xử lý trong một đơn vị thời gian được quyết định bởi tốc độ đồng hồ của CPU. Để tăng tốc CPU và thu nhỏ chip bán dẫn, người ta cố gắng nén một lượng lớn các đèn bán dẫn vào trong một diện tích nhỏ nhất. Tuy nhiên cuộc đua tăng tốc cho lõi CPU bị dừng lại do các giới hạn về phần cứng và nhiệt độ. Để tiếp tục tăng tốc cho CPU, người ta bắt đầu tìm một giải pháp khác để tăng tổng hiệu suất của CPU lên, đồng thời tăng hiệu suất tiêu thụ điện. Và giải pháp đó là đưa nhiều lõi hơn vào trong một CPU thay cho một lõi. Việc xử lý được đưa cho nhiều Core cùng xử lý, do đó tổng hiệu năng được tăng lên. Thoạt đầu, giải pháp nghe có vẻ rất hay nhưng vấn đề lại nằm ở phần mềm. Để tận dụng được lợi thế xử lý nhiều core trong các ứng dụng thì không phải là đơn giản. Trong quá khứ, để sử dụng được các core này, chúng ta phải xử lý việc khởi tạo và quản lý các thread này một cách thủ công. Việc này rất khó cho dev, bởi việc xác định được con số tối ưu của các thread trong từng hoàn cảnh dựa trên khối lượng tải hệ thống hiện thời, và phần cứng ở dưới là không hề đơn giản.
+Để xử lý vấn đề khó khăn này, cả iOS và OSX đề ra một cách tiếp cận khác cho việc xử lý đồng thời là: Thay vì dev phải tự tạo các threads trực tiếp, ứng dụng chỉ cần gửi tasks vào các Queue. Còn việc khởi tạo các thread thế nào, bao nhiêu thread được đẩy cho hệ thống quyết định. Bằng cách để cho hệ thống quản lý các thread, các ứng dụng có thể đạt được một mức độ linh hoạt mà cách xử lý cũ không bao giờ đạt được. Đồng thời lập trình viên có được một mô hình lập trình đơn giản mà hiệu quả hơn.
+
+
+
+# Lập trình hook win32
+Là cơ chế để chắn ngang các lời gọi hàm, sự kiện trước khi nó đến một ứng dụng, từ đó có thể sửa đổi theo ý ta, gia tăng hành vi, thêm chức năng or đổi chức năng.
+
+Hđh luôn duy trì một danh sách các hook procedure gọi là hook chain. Mỗi hook procedure có tác dụng chặn 1 loại sự kiện. Trong window, khi có sự kiện sẽ chuyển thành message lưu vào queue r chuyển qua ứng dụng cụ thể để xử lý. 1 hook procedure trong hook chain thực hiện xong sẽ chuyển quyền điều khiển cho hook procedure kế tiếp. Nó làm chậm CT nên chỉ cài khi cần thiết và loại bỏ khi xong. 
+
+Windows quản lý các ứng dụng đang chạy thông qua cơ chế message. Khi một ứng dụng cần xử lý, nó sẽ truyền một message tới hdh. Windows nhận lấy message này, giải mã nó rồi chuyển yêu cầu thực hiện cho CPU, rồi nó nhận kết quả trả về cũng ở dạng message chuyển tới ứng dụng.
+Hook là cơ chế chặn bắt các thông điệp gởi từ bất kỳ ứng dụng nào đang thực thi gởi tới Windows hoặc từ Windows gởi trả về ứng dụng. Dùng kỹ thuật hook, ta có thể thay đổi được các message này và nắm toàn quyền điều khiển các ứng dụng mà không phải do ta viết ra. VD: Windows Blind và các phần mềm tương tự nó là một dạng ứng dụng hook toàn hệ thống. Nó có thể sữa đổi tất cả giao diện của tất cả các control trong các ứng dụng khác, cũng như là thay đổi cách hành xử của các control trong ứng dụng.
+VD có thể bắt và giả lập các thông điệp bàn phím chuột như cung cấp chức năng HELP (F1) cho ứng dụng, tạo keylogger, autoplay của game online,..
+
+2 loại: Local Hook là bẫy sự kiện ngay trong tiến trình cài đặt; Remote Hook là bẫy sự kiện thuộc tiến trình cài đặt ứng dụng khác. Trong mô hình này lại tồn tại 2 kiểu khác là thread-specific bẫy sự kiện của một luồng cụ thể và system-wide bẫy sự kiện của mọi luồng trong tiến trình cài đặt của hệ thông.
+Tức là hook cục bộ là hook dành riêng cho một ứng dụng nào đó và khi thoát khỏi GUI ứng dụng đó thì mất tác dụng. Hook toàn cục sẽ bắt người dùng làm gì trên màn hình máy tính or dùng các ứng dụng khác. Ví dụ ta tạo ra 1 hook notepad thì dùng global hook vì nó kp là ứng dụng của ta.
+
+-> Pb:
+API(Application Programming Interface) là một thứ cung phương thức, giao thức để kết nối mọi thứ. Vd có 1 chức năng muốn cung cho 1 phần mềm khác, ta mở 1 API để tác giả của phần mềm kia truy cập vào chức năng của ta. Giả sử ta k thích tự dưng đóng API lại là ô kia k dùng đc nx luôn. 
+SDK là một bộ công cụ hoàn chỉnh dùng để phát triển phần mềm.
+
+
+
+# 4 loại mã hóa
+Symmetric Encryption or gọi là Secret Key Cryptography. Key dùng mã hóa và giải mã là 1. VD dùng thuật toán AES.
+
+Asymmetric encryption or Public-key cryptography: sinh 2 key có quan hệ số học là pivkey và pubkey. VD dùng thuật toán RSA
+Cơ chế: client yêu cầu kết nối -> server gửi public key của mình cho client -> client phát ra 1 symmetric cipher và encrypt nó bằng public key gửi cho server -> server decrypt nó và lấy ra symmetric cipher -> 2 phía đều có cùng 1 symmetric cipher(mục đích là nv), chúng dùng nó để tạo 1 sercure connection sử dụng symmetric cipher.
+Vấn đề làm sao biết được pubkey gửi qua là hàng thật? Dùng 1 tổ chức cerfiticate authority tổng hợp các địa chỉ website và public key of các website đó để chứng thực.
+
+Hashing function: là hàm 1 chiều mã hóa input thành 1 hash nhưng k có cách nào để giải mã theo chiều ngc lại. Nó sẽ tạo ra 1 output độc nhất với mỗi input khác nhau và 1 input thì chỉ luôn cho ra 1 hash duy nhất. VD thuật toán SHA, MD5
+
+Digital signature (chữ ký số): là sự kết hợp của hashing và asymmetric encryption. Message đầu vào sẽ đc hash và mã hóa tiếp bằng private key, đầu ra là chữ ký được gửi kèm với message. Bên nhận sẽ dùng public key để decrypt thành mã hash của chữ ký, sau đó message cx đc hash để ss với chuỗi vừa decrypt kia. Nếu public key là chính xác và decrypt thành công, ss 2 chuỗi mess hash như nhau thì mess ta nhận là chính xác do bên gửi gửi tới
+Vừa xác thực đc, vừa cho thông tin truyền qua bảo mật: message gửi đc hash và mã hóa lần 2 bằng public key sẽ thành chữ ký số -> nó được gửi kèm với cái message chỉ đc mã hóa bằng public key. Bên nhận sẽ decrypt chữ ký bằng private key thành hash của mess, decrypt cái mess để đc mess nhận đc chuẩn -> xong lại hash cái mess chuẩn -> ta có 2 cái hash, ss 2 cái hash trùng là xong
+
+
+
+# Multimedia
+Latency (độ trễ) là hiện tượng âm thanh thu vào bị chậm hơn so với thực tế. Đó là khoảng thời gian từ khi âm thanh phát vào thiết bị cho đến khi thiết bị phát lại nó ra loa. Như v độ trễ thấp sẽ tốt nhưng k nên để nó quá thấp mà ở mức vừa đủ VD 12ms thì sẽ tốt hơn vì khi độ trễ quá thấp thì máy tính sẽ làm vc càng nặng.
+Audio interface là thiết bị cho phép điện thoại thu âm độ trễ thấp. Audio interface có nh cổng, vd chơi 3 nhạc cụ thì sẽ cần tới 1 interface có 3 cổng input, 3 output
+Zero latency là tính năng 1 số audio interface hỗ trợ cho input đầu vào và phát mẹ ra loa luôn. Điều này quá tốt khi ta muốn live với vc nói và truyền tốc độ cao không thông qua máy tính. Nhưng nếu ta muốn chèn các âm thanh hay hiệu ứng delay, echo bằng máy tính thì k đc, Vd âm thanh vang lại giảm dần cố tính tạo ra khi hát karaoke.
+
+Máy tính chạy video, audio với codec vì các tập tin đó thường lớn và khó chia sẻ qua mạng. Để tăng tốc, ta dùng mã hóa rút gọn dữ liệu (encode), r giải mã khi xem và chỉnh sửa (decode), nhờ đó tốc độ tải vid, au tăng lên 3-5 lần bth. Có hàng trăm loại codec để nén, phát audio, video, gọi video trên mạng.
+Ví dụ máy tính của ta mà éo có codec MP3 thì nghỉ đọc đuôi mp3 nhé. 
+VD AVI là đuôi mở rộng vid nhưng tự thân của nó kp là codec, mà chỉ là 1 định dạng lưu vid dùng đc với nhiều codec. Các codec thường đi liền với phần mềm phát vid or nghe nhạc mà ta tải về. Trong quá trình sử dụng nếu gặp những vid, au mà k chạy đc vì thiếu codec thì ta phải tải riêng gói codec đó về.
+MP3: định dạng file bằng cách nén dữ liệu tổn hao, xóa đi những phần âm thanh k nằm trong khoảng nghe đc của con người, giống JPEG nén ảnh tương tự.
+=> Để chạy đc video, ta phải có cả video codec và audio codec.
+
+
+
+# OpenSSL
+1 thư viện được viết bằng C, giúp tạo và quản lý các chứng thực số. Có thể dùng Open SSL để thực hiện 2 kiểu mã hóa 1 chiều RSA và AES trong ứng dụng.
+
+RSA sinh 1 cặp private và public cho mã hóa bất đối xứng. AES tạo 1 priavte cho mã hóa đối xứng. Nó còn dùng initialization vector(IV) or salt.
+IV là số ngẫu nhiên được sinh ra. Nó có tác dụng làm cho các đầu vào giống nhau cho đầu ra khác nhau, nó nằm ở thành phần đầu ra. Salt là 1 dãy ngẫu nhiên cũng có tác dụng tương tự nằm ở thành phần đầu vào. Mô tả: private key là chìa khóa để mở ổ bị khóa bởi public key. Còn salt là cách phải lắc lư vặn như nào mới mở được.
+
+Luồng:
+A: B ơi, mã hóa file đó của m và gửi cho t cho an toàn, đây là public key của t. A đã dùng thuật RSA để tạo ra 1 cặp key key, giữ privavte cho mình và gửi public đi.
+B: T dùng thuật toán AES để sinh ra 1 key đối xứng và dùng key đối xứng đó mã hóa file. Sau đó dùng pubkey của A mã hóa AES key r gửi cho A mã AES và file được mã hóa
+A: Lấy private key giải mã cái AES key, r dùng AES đó giải mã file và đọc nội dung.
+Tại sao lại phải như v? Bởi vì AES dùng để encrypt 1 lượng data lớn nên ta mới dùng để encrypt file. RSA chỉ là thuật toán tạo key. Cần bt rằng ta k thể dùng cái public để encrypt file rồi gửi file cho A là xong, dùng đc thế thì chả cần AES làm gì nhưng public key k dùng để encrypt 1 lượng thông tin lớn như v.
+AES sẽ generate random bytes là khóa chung mỗi lần là khác nhau thông qua salt.
+
+-> libcrypto lo các hàm mã hóa như RSA, AES; libssl xử lý openssl library
+
+Cách dùng openssl với commandline RSA: 
+cd đến file openssl.exe trong thư mục bin của OpenSSL -> openssl.exe genrsa -out private.pem 2048 <link tới file openssl.exe> <lệnh generate 1 file bằng mã hóa rsa> <> <link tới file đầu ra> <số bit> => Lệnh sinh private key bằng 2048 bit. File đuôi pem là định dạng text base64 thường dùng để chứng thực thông tin an toàn cho 1 website
+-> openssl rsa -in private.pem -pubout > public.pem => đây là lệnh tạo public key từ 1 cái key có sẵn. Public key ở TH này là file public.pem
+Để dùng, ta chỉ cần mô phỏng lại hoạt động mã hóa của openssl. Nó cung sẵn cho ta commandline để thao tác với file. 
+VD Ta có thể dùng cmd để mã hóa bằng AES: openssl aes-256-cbc -salt -md sha1 -in file.txt -out file.enc -pass pass:passphrase
+Rồi giải mã bằng AES: openssl aes-256-cbc -d -salt -md sha1 -in file.enc -out file2.txt -pass pass:passphrase
+
+Đuôi file .enc là tệp file được mã hóa theo 1 quy chuẩn nhất định, phải có pass để giải mã ms xem đc.
+pem (Privacy Enhanced Mail) là định dạng file text, nội dung bên trong nó là base64 lưu chứng chỉ kỹ thuật số, ta dùng nó lưu key public và private.
+md(message digest algorthms)
+
+Quy trình test tương tự luồng bth: A gửi B public key -> B random ra 1 password, dùng public key RSA để encrypt cái password đó, r dùng password đó làm passphrase để dùng AES mã hóa cái nội dung cần gửi -> B gửi lại cho A cái nội dung cần gửi và cái password đã mã hóa, password là 1 random bytes k thể đoán mò (Tức cả A và B phải thống nhất 1 quy chuẩn chung là password để đầu file, ngay sau đó là nội dung, trong nội dung thì sẽ bắt đầu bằng Salted__<tên salt 8 bit><dữ liệu đc mã hóa>) -> A lấy private của mình giải mã password, dùng password đó giải mã nội dung file bằng AES
+
+Về kích thước: 
+Với RSA: private dài hơn public key, private dùng 2048 bits để tạo như ý ta, dùng 2048 bits chứ kp độ dài file private.pem là 256 bytes nhé. Khi dùng RSA nó sinh ra biến RSA* dài 256 bytes tức 2048 bits, biến này mã hóa 1 văn bản có độ dài bất kỳ thành 1 văn bản không thể đọc có độ dài 256 bytes cố định.
+Với AES: passphrase có độ dài bất kỳ. salt có độ dài 8 bytes. Sinh ra key và iv có độ dài 32 bytes. Từ cái key và cái iv, nó mã hóa 1 văn bản có độ dài bất kỳ bằng 1 văn bản có độ dài lớn hơn 1 chút, văn bản đầu vào càng dài thì đầu ra càng dài.
+Kích thước input là passphrase và văn bản. Kích thước output ít nhất là 1 khối block chứa dữ liệu thừa + kích thước văn bản đầu vào. 1 khối block có kích thước 16 bytes
+
+
+
+# Thư viện liên két động và tĩnh
+Compile: sẽ lấy các file.h khai báo trong main.cpp thành file.o, rồi link với các file.dll từ thư viện động tạo thành file.exe
+CT khi chạy sẽ đọc code trong file.dll or file.so (system object trong Linux) để sử dụng. Nó sẽ đọc trong quá trình chạy run-time và chỉ dùng những hàm cần thiết
+Thư viện liên kết tĩnh trong window khi compile là đuôi .lib, còn dùng mingw(gcc) cho cả window hoặc linux là đuôi .a
+
+Điểm khác biệt của nó so với dll là nó copy toàn bộ code trong static library vào bên trong file exe trong compile-time. Néu thư viện động bị lỗi thì sẽ die trong lúc chạy ms thấy, nếu thư viện tĩnh lỗi thì die ngay khi compile r.
+- Các thư viện động thg rất lớn vs nh code nhưng file exe vẫn nhẹ do thêm từ ngoài vào. Thư viện động cho phép nh Ct sử dụng 1 cách TT, sửa file dll rồi chạy theo file dll mới luôn mà k cần biên dịch lại nhưng thời gian chạy có thể lâu hơn vì đọc file từ đĩa cứng.
+- Các thư viện tĩnh làm cho Ct phình to ra nhưng compile thành exe xong r thì chạy nhanh vì k phải đọc từ file khác mà code có sẵn trong RAM cùng với code Ct r. Nên nếu dùng thư viện nhẹ thì static, nặng thì dùng dll.
+Logic tạo ra thư viện liên kết động rất hay. Việc tạo ra các plugin, module, extension cho ứng dụng cũng có thể coi là 1 cách hay để mở rộng chức năng cho 1 sp có sẵn mà k cần sửa đổi nó.
+
+
+
+# Dựng server multithread
+Server trong thực tế chạy multithread và mỗi thread lại chạy multi-connection thay vì 1 connection 1 thread.
+Đó cũng là cách giải quyết vấn đề C10K của server Apache: vấn đề 1 server quản lý 10k connection 1 lúc, bài toán bh đã lên tới hàng triệu 1 connection 1 lúc.
+
+Để làm đc điều đó phải có giới hạn, VD 1 thread của server cho phép 1 client với tốc độ tối đa. Nhưng để dùng 1 thread đó cho multiconnection thì mỗi connection k thể tối đa được mà phải giảm xuống. VD tốc độ load của client khi kết nối với server max là 1GB/1s nhưng để dùng multithread thì tốc độ chỉ còn là 10MB/1s. Người ta sẽ setup cái giới hạn đó cho mỗi client khi kết nối với server để đảm bảo có thể phục vụ cho 1 số lượng client đủ lớn. Bên trong từng thread sẽ chạy asynchronous.
+Như ta đã biết, lập trình multithread asynchronous sẽ do máy tự tính toán. Ví dụ: có max 2 thread a và b đang xử lý 2 công vc, ta muốn thêm 1 công vc thứ 3 thì máy sẽ tự tìm rằng thread đó cái nào rảnh hơn thì sẽ nhét vào thread đó để tối ưu. Đó là cơ chế máy xử lý mà ta có học qua trong môn intro. CV của lập trình viên chỉ là set cho Ct chạy multithread asynchronous, set chạy task còn lại máy tính lo.
+Nếu máy chỉ có max 8 core chạy 8 thread nhưng ta lại tạo ra 1 app chạy 100 thread cơ thì vẫn đc. Nhưng 100 thread độc lập chạy k khiến Ct tốt hơn vì thực tế nó chia đều 8 thread có thể có cho 100 thread dẫn đến tốc độ mỗi thread bị chậm đi vì nó cố chạy nhảy qua liên tục các thread để đảm bảo chúng đều đang chạy.
+
+Linux coi socket, stdin, stdout, stderr, file đều là file và giới hạn số lượng file có thể mở (check: ulimit -n) ở 1 con số khá nhỏ tùy cấu hình. Nếu dùng server với linux thì số lượng socket giới hạn chính là số file đó - đi số file đang mở. Để pb giữa các file dùng file descriptor là số nguyên duy nhất quản lý bởi kernel. 
+Tuy nhiên trong window thì số lượng connection có thể tạo lớn gấp nhiều lần linux, k xét lượng thread mà là lượng tối đa của connection. Đó là do window dùng IO completion port. Vs nó, window quản lý tốt hơn: Nếu ta set 1 số lượng thread vào 1 IO completion port thì khi có event tới, cái port đó sẽ lấy ra 1 thread đc set và xử lý cái event với giới hạn do ta set, nếu k nó sẽ lấy max là số lượng CPU cores. Nếu số lượng thread vượt quá giới hạn thì nó sẽ đợi khi nào có rảnh thì thực hiện. Nhờ IOCP mà xử lý đc vấn đề 1 thread xử lý nh client. Nó cx đi với giới hạn socket và file có thể handle nhưng có hàng đợi và mở đc nhiều hơn linux.
+
+Khi dựng server giao tiếp cần có mimetype. Mimetype xác định loại file và ngôn ngữ, nếu server k có loại đó sẽ k thể đọc. Khi xử lý cũng kiểm tra nếu k có thì có thể gửi application/octet-stream là 1 file chứa dữ liệu nhị phân - 1 kiểu mime type mặc định.
+
+Cơ chế browser gọi vào server: k chỉ tạo 1 client mà là nhiều client. VD ta kết nối phát là tạo ra 1 client đầu tiên k gửi request gì cả (chắc là kiểu thiết lập), client thứ 2 tạo ra sẽ yêu cầu lấy directory / -> thì server gửi file mặc định -> nhưng do browser sẽ load hết các tính năng của HTML nên nó sẽ yêu cầu cả các thứ như file ảnh, âm thanh, file js mỗi cái sẽ tạo ra 1 client mới và gửi request lấy các thứ đó. Khác với telnet chỉ 1 client gửi 1 request.
+Khi browser gửi request thì nó luôn kết thúc bằng \r\n\r\n nên kiểm tra phải có nó thì mới là request của browser
+
+
+
+# Test
+4 mức độ: unit test, kiểm thử tích hợp, system test, acceptance test.
+Unit Test: Viết test cô lập từng phân hệ thống và test từng class method. Việc viết unit test có thể lâu hơn việc viết ra cái method đó nhưng lợi ích về sau rất lớn.
+
+Test case cô lập nhau. Khi có sự thay đổi, cần chạy lại các test case trước đó để đảm bảo k ảnh hưởng đến các test case đã pass trước đó. Test suite là 1 tập hợp test case cho 1 tính năng cụ thể. 
+Test to pass trước là thực hiện kiểm tra vói những chức năng tối thiểu của phần mềm, test to fail sau là kiểm tra với những TH lắt léo, bí ẩn, cố gắng đẻ bắt lỗi.
+
+Mô hình TDD (Test Driven Development): deverloper sẽ soạn thảo kịch bản kiểm thử -> gõ code và kiểm tra cho đến khi pass hết test case -> clean up code
+Behavior-Driven Development (BDD): trong TDD, tester đã vô dụng, mô hình BDD ra đời sẽ cho tester hỗ trợ developer ở quá trình xây dựng test case.
+
+-> TDD: viết test fail (RED) -> sửa code cho nó pass (Green) -> loại bỏ code thừa, clean nó (Blue).
+RED: nghĩ về chức năng sẽ implement và gọi trong test -> test sẽ fail. Ta implement cho nó chạy đúng -> green. TDD tập trung thỏa mãn nhu cầu người dùng đầu tiên chính là unit test. Lúc viết test ta còn chưa biết sẽ implement như thế nào -> càng độc lập vs implement càng tốt vì đứng từ phía người dùng.
+Viết test case mà ta hiểu nó nhất trước, những test case gồm func hay dùng nhất. 
+GREEN: Chỉ cần làm mọi cách với 1 lượng code ít nhất tập trung vào code đang làm để pass qua cái test.
+BLUE là quá trình tái cấu trúc code mà k đổi tính năng. Tương tự refactor cả test nx, trong test k đc viết logic, sau này sửa rất khó.
+Mọi code đều có unit test. Nếu code thỏa mãn test thì sẽ k còn đoạn code nào là vô dụng.
+
+
+
+# VPN và Tor
+-> VPN (Virtual Private Network - Mạng riêng ảo): kết nối các thiết bị với Internet thông qua một máy tính khác như 1 mạng riêng. Thay vì kết nối trực tiếp, ta sẽ kết nối thông qua kết nối internet của một máy tính khác. VPN cũng mã hóa dữ liệu gửi đi, giúp bảo mật giữ liệu, ẩn danh.
+
+Cơ chế: Khi truy cập internet để vào 1 trang web, máy sẽ chuyển yêu cầu sang máy chủ của nhà cung cấp ISP r kết nối ta tới trang web. Khi dùng VPN, ta sẽ trực tiếp kết nối với máy chủ VPN như thế là kết nối cục bộ, mã hóa dữ liệu trước khi gửi đến ISP, ISP k thấy được dữ liệu ta gửi đi
+<máy tính gửi data đi>----đường truyền bảo mật VPN mã hóa-------ISP/Goverment/Hacker------Internet -> cả chiều đi và về đều bảo mậ
+
+VPN giúp fake ip, duyệt web http thoải mái, truy cập các trang web bị chặn về địa lý, duyệt wifi công cộng an toàn (khi k có VPN sẽ rất dễ để hack thông tin vd truy cập wifi công cộng xong đăng nhập email có thể lộ mk).
+Vd Khi đặt vé hay mua gì, nhiều nơi hiển thị giá khác nhau, người ta có thể kết nối VPN với máy chủ ở quốc gia khác để tìm mức giá rẻ hơn.
+
+-> BitTorrent là kiểu file(.torrent) chứa metadata về nơi mà dữ liệu bên trong được tìm thấy. Nó là cốt lõi của mạng file p2p phân tán. VD khi ta muốn tải 1 file về thông thường ta sẽ tìm nó trên internet (truy cập vào server) và ấn down xuống. Nhưng truyền tải file trên bitTorrent nó k lấy dữ liệu từ máy chủ mà nó lấy từ 1 người khác có cái file ta đang tìm kiếm, người đó sẽ chia sẻ cho mn cùng tải.
+Đầu tiên 1 người có file sẽ tiến hành "gieo hạt", những người khác sẽ vào và tải với tốc độ nhanh. Nó sẽ tự có cơ chế để giữ chân khách hàng, VD muốn tải về phải trả tiền cho người đăng lên hay trả tiền sẽ có tốc độ cao hơn. Giao thức BitTorrent có thể thay thế cho máy chủ, cho phép người dùng tham gia vào một cộng đồng mạng để có thể upload/download tệp tin với nhau.
+Nó giúp tải được nhiều thứ mà ta google k có or k còn mà người khác có bao gồm cả nội dung bất hợp pháp, viruss.
+Seed: hoạt động tải lên; Leech: hoạt động tải xuống; peer: tổng số seed là leech; swarm: tổng số peerer (seeder và leecher); tracker: server theo dõi swarm và điều phối hoạt động download của tất cả ng dùng, thg download file có nhiều seeder
+
+Để dùng bitTorrent, cần cài 1 phần mềm là BitTorrent client. Dùng 1 trình duyệt bất kỳ -> duyệt trang web có danh sách tệp torrent -> tải về -> mở tệp đó bằng bittorrent client -> bittorrent kết nối với tracker -> tracker hiển thị các thành viên của mạng bittorrent để tải tệp về.
+BitTorrent cũng là 1 loại tiền điện tử BTT ứng dụng được công nghệ blockchain. Nó tương tự với cơ chế trả tiền giữ chân người dùng bên trên. 
+
+-> Tor (The Onion Router): xóa dấu vết, địa chỉ IP xuất xứ của máy truy cập internet, lướt deepweb, các thông tin trao đổi qua tor được mã hóa và truyền qua nh máy chủ trung gian khác nhau.
+Cơ chế: Sử dụng proxy tình nguyện ẩn danh. Nó hoạt động thông qua nh máy chủ trung gian khác nhau và thay đổi liên tục cả máy chủ (cả đầu, cuối trong mạng tor), vd: lúc ở canada, lúc ở mỹ đổi liên tục. Do đó tốc độ truy cập mạng chậm vl.
+Cách dùng: tải tor về và dùng nó chung với các trình duyệt web khác. Ta có thể dùng nó và địa chỉ của ta sẽ đổi sang nhiều ng khác trong mạng tor liên tục trên toàn thế giới, ta cx có thể tình nguyện chia sẻ đường truyền internet của mình cho mạng tor để ng khác nhảy qua mình.
+
+Tor Browse: 1 trình duyệt hoàn chỉnh. Nó mã hóa thông tin trước khi đưa lên mạng.
+Nếu chỉ vậy thì k khác gì VPN, thậm chí còn phức tạp hơn vì phải đi qua nhiều node. Nhưng công nghệ lại nằm ở chỗ, thay vì chuyển cả gói dữ liệu qua các node thì Tor sử dụng kỹ thuật “onion routing”. VD khi truy cập thì dữ liệu đầy đủ của người dùng gửi đi sẽ bao gồm thông tin đia chỉ IP và địa chỉ đến của dữ liệu. Lúc này qua Tor nó sẽ được tách thành các lớp dạng: thông tin đia chỉ IP + node 1; thông tin node 1 + node 2 … thông tin node n + địa chỉ đến của dữ liệu. Tức dù ở node nào trong mạng cũng k có đủ thông tin về toàn bộ dữ liệu user mà chỉ có một phần k đầy đủ thôi.
+
+-> Kết hợp tor với VPN:
+Vào tor qua VPN: máy -> VPN -> tor -> internet => nút mạng truy cập của Tor sẽ k biết đc địa chỉ Ip của ta, tức ISP k biết ta dùng tor nhưng vẫn biết ta dùng VPN. Nó cx k hoàn toàn ẩn danh như là chỉ dùng mỗi tor (tor vẫn nguy hiểm ở nút thoát mạng của tor browse), và VPN vẫn biết IP thật của ta.
+Vào VPN qua Tor: máy -> tor -> VPN -> internet => phải cấu hình VPN để làm vc với trình duyệt tor -> cách này thì an toàn hơn nhiều vì nhà VPN k có cách nào tìm đc IP ta dù vẫn thấy địa chỉ IP nút thoát mạng của trình duyệt tor
+Ví dụ có thể dùng Tor như 1 proxy để truy cập internet. Khi đó dùng vidalia set cho nó cái proxy với host name, port, type, user và password nếu muốn. Sau đó có thể dùng external browser duyệt web ẩn như tor mà k cần dùng tor browser.
+
+-> Dùng Tor trong Qt: Muốn làm v phải dùng vidalia để biến cái tor thành proxy rồi dùng QNetworkProxy. Chú ý dùng type default proxy chứ kp socks5proxy vì ta đang cài cái proxy cho network mặc định thành proxy của tor nhờ vidalia. Hàm setApplicationProxy sẽ khiến cho cái app hiện tại của ta -> mọi socket vào mạng dùng trong app đều phải đi qua cái proxy này (cổng giữa user và internet), khi đó QAccessNetworkManager sẽ vô mạng qua proxy này hay có IP của tor.
+
+
+
+# Wifi
+Wifi có thể bruteforce vì nhập sai nhập lại liên tục, nhưng thời gian kết nối lâu nên k khả thi.
+Blueway là thiết bị dò wifi với các mk thông dụng trong phạm vi vài trăm mét và khuếch đại wifi đó để dùng.
+
+Wifi cmd window:
++) netsh wlan show profiles -> hiển thị các mạng wifi đã kết nối
++) netsh wlan show profile name=<tên wifi> key=clear -> xem mật khẩu của wifi
++) netsh wlan delete profile name=<tên wifi> -> xóa wifi đã từng sử dụng  
++) netsh wlan set profileparameter name="name" connectionmode=auto -> connectionmode = manual là thủ công phải bật bằng tay
++) netsh wlan add profile filename=<link tới file xml> -> ta có thể kết nối wifi bằng cmd với lệnh này. Mỗi wifi sẽ có 1 file xml riêng, trong đó có các thông tin bao gồm tên và password luôn.
++) netsh wlan show wlanreport -> có thể xem báo cáo sử dụng wifi theo thời gian
++) netsh wlan export profile key=clear folder=<tên vị trí xuất xml, ví dụ C:/> -> xuất toàn bộ
+netsh wlan export profile name=<tên wifi> key=clear folder=<tên vị trí muốn đặt>
++) netsh wlan -> liệt kê lệnh
++) netsh interface show interface -> xem các wifi đang kết nối.
+netsh interface show interface name=<tên interface> -> cụ thể 1 interface nào có kết nối.
++) netsh wlan connect ssid=<password> name=<tên>
++) netsh wlan disconnect
++) timeout <số nguyên giây> ->thread của cmd sẽ dừng lại trong bnh giây, giúp update hệ thống khi thực hiện lệnh
+
+Trong C, có thể dùng system("") để thao tác với commandline trong Ct. VD: dò wifi và dùng timeout 2 để chờ cho kết nối wifi được update trong cmd
+
+
+
+# Winadmin
+UAC: user account control quản lý các account trong window. Nó là 1 tính năng bảo mật giúp ngăn chặn những thay đổi trái phép với hệ điều hành. Ví dụ máy nhiễm virus làm thay đổi hệ thống thì UAC sẽ cản vc đó. Nó sẽ yêu cầu sự chấp thuận của quản trị viên nếu như muốn thực hiện thay đổi.
+
+Ta có thể tạo ra administrative program trong window -> khi ấn sẽ prompt to UAC yêu cầu người dùng quyền admin. Để run được cái app đó thì qt creator cũng phải run as administrator.
+Để app có 1 icon và chạy dưới quyền admin: Ta cần 1 file .rc(code C++), 1 file .manifest(chạy XML), 1 file là .ico(là ảnh của ta)
+
+.ico là định dạng ảnh cho biểu tượng của window. Để có icon -> ta lấy 1 tấm ảnh bth r resize kích thước chuẩn 48x48 cho 1 bức ảnh icon window -> vào cmd run as administrator(nếu cần) -> magick.exe convert <link tới file 48x48> <link tới file .ico muốn tạo> 
+ImageMagick là tool sửa ảnh. VD để dùng trong paint -> resize kích thước -> save as -> other format -> 256 color bitmap -> lưu đuôi .ico
+
+Để dùng icon trong app qt, ta tạo 1 file .rc và mở bằng editor -> thêm vào:
+#include <windows.h>
+IDI_ICON1	ICON	DISCARDABLE	"<tên file .ico>"      (cái DISCARDABLE chỉ là báo icon này discard đc thôi, k có cx đc)
+-> Để file .rc và .ico vào thư mục chứa file .pro
+-> Vào file .pro, thêm: RC_FILE = <tên file .rc> -> build app là xong
+File đuôi .rc là file resource script định dạng text. Nó thường dùng lưu các thành phần như giao diện, ảnh, biểu tượng.
+
+Tiếp theo để biến thành administrator app cần file .manifest. Ta dùng mẫu có sẵn:
+name="<tên app phân cách thư mục bằng dấu chấm>" 
+type="<win32 or win64 tùy ý>"
+Thẻ <description> thêm mô tả về cái app
+Nhưng mấy cái đó kqtr, qtr là: level="requiredAdministrator" là cái làm cho app của ta thành administrative app.
+Để dùng file .manifest, thêm: CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "<tên file .manifest>" (vẫn phải RC_FILE = ".rc" trong file .pro)
+
+
+
+# Window Service
+Window Service (daemons) là 1 chương trình chạy ở nền mà k cần sự tác động từ ng dùng. Ta có thể cài đặt cho nó chạy thủ công hoặc bằng sự kiện. 
+Dùng khi 1 ứng dụng cần chạy liên tục. Ng ta sẽ viết code cho nó chạy ở nền và k có sự tg tác of ng dùng. Vd khách hàng yêu cầu 1 ứng dụng chạy ngầm để tổng hợp dữ liệu bán hàng từ các server chẳng hạn..
+
+Để 1 service chạy cần: install nó với sc command của window cmd -> start nó.
+(sc là viết tắt của service control - ta tạo ra 1 app controller cx chỉ là tương tự cái này thôi)
+
+Upstart (tự động khởi động): là phần mềm tự khởi động cùng với máy khi bật lên
+Trong window có thể dùng upstart cho 1 file exec bằng lệnh sc: Bật cmd bằng run as administrator
+-> Để install: sc create "<tên service>" binpath="<link tới file của service>" start=auto (tức start = auto sẽ tự chạy khi bật máy)
+-> sc stop <tên service>
+-> sc delete "<tên service>" ->phải stop trc r ms xóa nhé
+-> Để chạy service nếu chưa chạy: net start "<tên service>" và: net start để hiển thị các service đang chạy trên máy
+
+Khi dùng service thì nó sẽ chạy ngầm, đồng nghĩa ta k thể thấy trên TaskManager, và ta vẫn có thể thao tác với nó thông qua controller, nếu dùng nó kết hợp vs kỹ thuật hooking thì có thể theo dõi máy tính của 1 người khác mà họ k phát hiện ra.
+
+
+
+# Wrapper class là 1 class bao bọc class khác
+VD Khi dùng thư viện bên thứ ba, ta thường kiểu phải khai báo các hàm như init và try catch. Ta dùng code của thư viện bên thứ ba dẫn đến nếu họ bảo trì là ta phải vào sửa tùm lum mọi chỗ. Wrapper class ra đời sẽ gom phần code bên thứ 3 lại. Nếu bảo trì chỉ cần sửa code trong class đó thôi
+=> Gọi là adapter pattern. Thường bên thứ 3 cung cả interface wrapper class cho ta dùng luôn.
+
+
+
+# Encode và Decode
+Encrypt và decrypt dùng trong bảo mật là mã hóa thông tin đọc được thành k thể đọc được. Còn encode và decode thực ra chỉ là định dạng của ký tự. 
+
+VD chữ tiếng việt là dưới định dạng UTF-8 hiển thị ký tự unicode. Máy của ta phải dùng UTF-8 để encode ký tự unicode để lưu. Mỗi lần mở ra thì notepad sẽ dùng UTF-8 decode văn bản Unicode hiển thị ra. Chú ý là k có kiểu encode Unicode nhé, mà gọi là UTF-8
+UTF-8 là 1 trong các kiểu để encode. Với PP này, họ chia bảng Unicode thành 3 phần, phần 1 là ASCII dùng 1 byte, các ký tự sau phức tạp hơn cần nhiều byte hơn để lưu thì sẽ dùng đến 2 bytes or 3 bytes. Họ dùng số byte đó để biểu diễn 1 con số cho mỗi ký tự, số này chính là mã ánh xạ ký tự đó trong bảng Unicode.
+UTF-16 (2byte) và UTF-32 (4 bytes cho 1 ký tự) dùng nhiều byte hơn cho mỗi ký tự-> điều này rõ ràng là k cần thiết vì phí bộ nhớ. 
+
+-> Pb: Font chữ là cách viết khác của ký tự đó mà thôi, klq tới bảng unicode. Kiểu gõ có 2 kiểu là Vni và Telex
+
+-> Các ký tự trung hoa hay nhật bản thực ra cũng là unicode hết. 
+=> Unicode biểu diễn được mọi văn bản hiện hành thì tại sao có những lúc hiện ra dấu ? trong notepad => là do k đúng kiểu decode. 1 văn bản mà sai kiểu decode thì nó sẽ chả ra ký tự gì hết. VD nhét 1 văn bản lưu định dạng SHIFT_JIS vào notepad cho decode bằng UTF-8 lại chả toang.
+
+Ví dụ thanh url có kiểu encode là base64
+
+VD giả sử có 1 văn bản QString là chữ nhật r dùng QTextCodec với SHIFT_JIS để encode nó thì hiển nhiên là gọi hàm fromUnicode vì chữ nhật đó là unicode. Xong ta hiển thị nó ra thì đó chính là ký tự mà sau khi nó encode thành, 1 dãy định dạng k rõ (máy cũng sẽ lưu số 01 thôi), xong decode nó bằng hàm toUnicode bth sẽ hiện lại dòng chữ. QTextCodec cho phép người dùng lưu văn bản bằng encode nào và đọc 1 văn bản khác bằng kiểu decode nào. VD notepad mặc định là lưu và đọc bằng UTF-8.
+
+SHIFT_JIS là 1 kiểu encode/decode phổ biến trong các document ở Nhật. Ví dụ vào 1 trang web tiếng nhật ngày xưa, nó dùng SHIFT_JIS để encode nên vào bằng trình duyệt mà k biết là phải decode bằng SHIFT_JIS thì sẽ k hiển thị j cả, lúc đó nó hiển thị các dấu ?
+
+Charset là các kiểu encode/decode. Ngày nay các trình duyệt hỗ trợ thẻ meta có kèm charset để mọi ngôn ngữ đều ok. VD:
+<meta http-equiv="Content-Type" content="text/html;charset="UTF-8"">
+=> Điều này tưởng chừng như ổn rồi vì cứ đập vào mặt 1 chuỗi văn bản ký tự unicode có thể hiểu đc thì hiển thị nó ra bình thường thôi nhưng nếu người ta lại nhập vào 1 văn bản được encode bằng kiểu khác thì sao? VD 1 văn bản hiển thị unicode nhưng được encode bằng kiểu kp là UTF-8 mà bằng SHIFT_JIS và văn bản đó là vô nghĩa chưa đc decode, ta phải bảo người dùng xác định kiểu encode văn bản này r decode nó ra r hiển thị ra màn hình. Nếu k sẽ toàn ?
+
+Ví dụ: 1 ứng dụng nhận được 1 văn bản Unicode -> lưu -> ứng dụng encode nó theo định dạng ta set -> chuyển sang các số 01 và lưu các số 01 -> mở -> ứng dụng chuyển từ 01 sang chữ -> decode theo định dạng đúng của nó -> hiển thị nội dung đã decode. 
+- Nếu văn bản ban đầu có dấu sắc mà ta cho encode bằng ANSI ngay lập tức ký tự đó biến thành ?
+- Nếu văn bản đó được encode bằng 1 ứng dụng khác sử dụng SHIFT-JIS (nó lưu lại file bằng encoding SHIFT_JIS) -> decode bằng UTF-8 -> sai ngay. Do đó nếu ta dùng notepad tạo bằng qt để đọc 1 file -> file đó encode bình thường với UTF-8 thì ứng dụng qt sẽ hiển thị bth. Kiểm tra nếu đọc k đc thì hỏi ng dùng codec j -> dùng QTextCodec với Codec đó để decode nó bằng toUnicode -> hiển thị ra.
+=> Kp văn bản nào ta cx encode r decode cùng kiểu là ra văn bản ban đầu. Đó là lý do có nhiều kiểu codec khác nhau ở nhiều vùng miền khác nhau. VD văn bản tiếng nhật mà ta encode bằng UTF-8 là sẽ ra rất nhiều dấu ? xong decode thì nó k về văn bản ban đầu nx vì UTF-8 k encode chuẩn với tiếng nhật. Phải tùy loại mà xđ đúng kiểu encode.
+

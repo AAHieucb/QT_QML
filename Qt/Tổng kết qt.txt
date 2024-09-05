@@ -1,0 +1,241 @@
+Qt:
+
+
+# Basic
+-> include "" sẽ tìm trong thư mục hiện hành, <> sẽ tìm trong tất cả thư mục
+Qt Designer giúp tạo ra file ui phức tạp hơn
+
+-> QWidget giúp tạo cửa sổ bth, QMainWindow tạo cửa sổ có widget có sẵn, chỉ QDialog có whatsthis thôi
+
+-> Khi xóa thì nên đảm bảo 1 loại dữ liệu chỉ bị xóa 1 lần, vì nếu dữ liệu đã bị xóa mà gọi xóa nx có thể abort. VD: đóng biến con -> xóa biến con -> bỏ biến con khỏi list -> xóa list -> đóng biến mẹ -> xóa biến mẹ -> đóng cửa sổ chứa biến mẹ -> đóng Ct
+
+
+
+# OpenSSL
+Là thư viện phần mềm cho các ứng dụng bảo mật truyền thông mạng. VD nó có lệnh command tạo pub/piv key làm chứng chỉ ssl cho trang web.
+Setup Qt openssl: tải open ssl win 32 về -> vào pro file thêm vào LIBS tới nó và thư mục bin+ dẫn tới 2 thư mục dll mà ta cần dùng -> build đúng chế độ phiên bản
+Qt có QSsl tương tác với Openssl
+
+-> Luồng: Client gửi message "hello", khởi tạo 1 handshake từ client tới server. Message đó bao gồm TLS version mà client hỗ trợ, cipher suite mà client hỗ trợ và 1 chuỗi random string -> server gửi lại client message bao gồm server's ssl cerfiticates, server's chosen cipher suite, another random string tạo bởi server -> client verify the server's ssl cerf bằng cách gửi cho authority bên thứ 3 phát hành cái cerf đó để xác nhận thành công -> client gửi tiếp 1 random string gọi là premaster secret, được mã hóa bởi public key và chỉ đc giải mã bằng private key (vì client nhận public key từ chứng chỉ ssl của server) -> server giải mã premaster secret bằng private ke y -> cả client và server sẽ tạo ra session key từ client random string, server random và premaster secret-> client gửi message "finished" đc mã hóa bởi session key (client is ready để trao đổi) -> server send "finished" message đc mã hóa bởi session key(khóa phiên chỉ dùng đc trong phiên đó) -> the handshake is completed và cuộc trao đổi diễn ra sử dụng session keys ( => đó là thuật toán RSA)
+
+-> Link OpenSSL dll
+Thêm file dll vào qt cmake: cmake cung các hàm thao tác bên trong
+set(<tên> <link tới dir chứa dll>)
+include_directories(<link tới file include>)
+add_executable ...
+target_link_libraries(<tên project> ${<tên link tới dir có dll ban đầu>}/<link tiếp từ đây tới file dll> ${}/.dll (thêm nhiều lần nếu nhiều file dll))
+=>  Mọi thư viện bên ngoài muốn add vào cmake thì đều cần: link tới file dll và link tới thư mục chứa file include
+=> Phải chủ động dùng từ file đó trở đi, vd file include -> openssl -> file.h thì làm như trên phải dùng là #include <openssl/file.h> tính từ include như v
+
+Thêm OpenSSL vào CMake: 
+C1: Dùng cách trên thủ công rất ok.
+C2: CMake có sẵn biến trỏ đến url của OpenSSL tự động. Nếu ta tải về k theo standard thì chỉ phải định nghĩa thêm biến OPENSSL_ROOT_DIR mà thôi:
+set(OPENSSL_ROOT_DIR <link tới thư mục chứa các folder lib,bin,include của OpenSSL>) 
+#set(OPENSSL_USE_STATIC_LIBS TRUE) #OpenSSL cung cả static(thư mục lib) và dynamic(mục bin)->muốn dùng static ở đây thì thêm vào như này
+
+include(FindOpenSSL) => marco tự xác định của CMake. Nó tự xác định bin/lib và include trong OPENSSL_ROOT_DIR mà ta set
+=> Có thể thay dòng trên bằng: 
+find_package(OpenSSL REQUIRED) => chỉ tự tìm các dll/lib trong OPENSSL_ROOT_DIR mà ta set
+include_directories(${OPENSSL_INCLUDE_DIR}) => OPENSSL_INCLUDE_DIR chỉ tự tìm thư mục include trong OPENSSL_ROOT_DIR mà ta set
+
+add_executable ...
+target_link_libraries(${PROJECT_NAME} OpenSSL::SSL OpenSSL::Crypto) 
+or thay thế bằng: target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES})
+
+
+
+# Asynchronous
+Race condition, ví dụ method của thread này dùng biến thuộc thread khác, nhưng method đang dùng dở thì biến đấy bị xóa. Còn data race là TH nhiều method cùng vào 1 biến
+
+-> QtConcurrent tự động chỉnh số lượng thread tùy vào số lượng processor core available trong máy, giúp tạo multi thread programs mà k dùng đến các thứ low-level như là mutex, read-write lock, semaphore như ta thg dùng vs thread.
+
+-> Hàm moveToThread khiến class đang ở thread này lại chạy 1 hàm của nó trong thread khác. 
+Cẩn thận sai nếu biến khai báo thread này nhưng lại dùng trong thread khác mà ta k chủ động làm điều đó. 
+
+-> VD tạo 2 cái telnet kín cả 2 thread -> tạo connection thứ 3 -> máy vẫn chạy connection thứ 3 vào 1 trong 2 cái thread (chọn cái rảnh hơn) -> tương tự nhét thêm vào 4,5 telnet vẫn chạy (tốc độ hiển nhiên giảm).
+
+Xử lý transfer rate: ta tách 1 class riêng để làm vc đó, class này có vai trò gửi từ 1 IODevice nguồn đến IODevice đích với 1 tốc độ nhất định do ta kiểm soát. Ta kiểm tra source có byte thì gửi (source read rồi des write luôn) 1 lượng rate -> sau đó kiểm tra vẫn còn dữ liệu thì chờ 1 khoảng delay r gửi tiếp -> xong lại kiểm tra có byte thì gửi cho đến hết -> quá đơn giản. 
+
+
+
+# Giao tiếp qua socket với TCP/UDP
+Tạo server: ta có 1 cái máy tính chạy server có rất nhiều cổng -> cái server ấy có địa chỉ ip là địa chỉ ip của máy tính
+Thiết lập server: server đc cài đặt nhận kết nối với ip nào và cổng nào. Ip ở đây là ip của máy chứa server, do máy đó có nhiều địa chỉ ip (nội bộ, internet) song còn tùy vào ipv4 interface hay ipv6 interface, ta thích dùng cái nào ở server để trao đổi với client thì set. Còn port là cái port ở trên server mà cái socket nó tạo ra sẽ ngồi rình dữ liệu đi qua thì lấy, giao thức custom TCP thì chọn công trống bất kỳ là được.
+Thiết lập client: Bh ta connect client với server và gửi 1 tin đi. Giả sử dùng lệnh telnet open, client sẽ tạo ra một socket, trên 1 cổng rảnh. Nó gửi yêu cầu kết nối đến server có ip và cổng mà cái socket của server đang ngồi rình. 
+Server chấp nhận kết nối và giao tiếp -> qtr client gửi tin trải qua 4 tầng tcp/ip
+=> Ta tạo server và client k cần qt, chỉ cần set port và ip của client như bth. Tạo server -> cho server nghe trên ip và port nào -> tạo client gửi request vào ip và port đó là ok
+
+
+
+# Single instance application
+Là ứng dụng chỉ chạy 1 instance trong 1 lúc. Ví dụ ta có thể mở nhiều app notepad 1 lúc vì nó là multiple instance application. Còn game ví dụ ta mở LoL thì chỉ mở đc 1 cái, nếu click đúp để mở thêm 1 app nx thì nó éo chạy mà sẽ focus hiện vào cái đã mở vì là single instance app.
+
+Để tạo ra single application thì ý tưởng là: ta chạy Ct thì ta cho mỗi instance của app sẽ kết nối tới 1 cái server xác định. Xong mỗi khi vào app ta sẽ kiểm tra, nếu cái instance này đã kết nối với server(tức nó đã tồn tại) thì exit nó luôn(return 0;). Còn nếu cái instance này chưa kết nối tới server thì tạo ra server để các lần kết nối sau sẽ thành công. Ta còn có thể điều khiển nếu đã kết nối server thì trc khi tắt đi, ta lấy một vài thông tin từ nó và dùng nó trong cái instance lần đầu bật->đương nhiên lấy thông tin thông qua server là trung gian r.
+Cái server ở đây là gì? Đương nhiên ta k thể dùng 1 cái server j bên ngoài r->ta sẽ tự tạo server trong app và cho nó kết nối.
+Trong Qt: phiên bản cũ có QtSingleApplication giúp tạo instance app với cơ chế tương tự, ta vẫn có thể tải về dùng nhưng k nên dùng nhiều code lỗi thời. Hiện tại, Qt cung cấp QLocalServer và QLocalSocket mà ta sẽ dùng tạo single app. Nhớ thêm module network.
+
+-> Ta truyền dữ liệu giữa các process bằng các kênh pipe. Có 2 loại pipe(Pipe stream):
+Anonymous Pipe: cho phép giao tiếp giữa các máy tính cục bộ, thg dùng làm kênh giao tiếp giữa các thread hay các process. Chỉ truyền tải 1 chiều, k dùng đc thông qua mạng
+Named Pipe: hoạt động theo theo mô hình client/server. Hỗ trợ giao tiếp 2 chiều và có hoạt động thông qua mạng. Để sử dụng thì tạo client/server và connect thôi. Nhiều chức năng hơn anonymous pipe.
+Về cơ bản nó khá giống socket client và server bth.
+
+
+
+# Static và dll
+Tạo và dùng dll trong qt: Trong C++ lib chọn shared library -> trong file pro sẽ có TEMPLATE=lib -> tạo sẵn 2 file .h, trong đó file global sẽ định nghĩa marco. Khi compile thì marco sẽ tạo ra symbol, vai trò như 1 cái bookmark báo hiệu rằng shared library có thể export đi -> tạo lệnh -> build nó (k đc run) -> copy .dll của thư viện vào thư mục debug, release của Ct -> chú ý compile file dll ở 32 hay 64 thì phải đúng -> vào file pro: LIBS += <path tới file dll> -> include file h và dùng. Khi distribute app thì gửi exe và dll
+
+Cách tạo và dùng static lib trong qt: trong C++ lib chọn statically linked library -> viết code cho thư viện -> compile sẽ có file.a -> vào file pro của Ct: INCLUDEPATH += <link tới thư mục chứa file.h của static>(thư mục chứa file .h đó là thg gọi là thư mục include) và LIBS += <link tới file .a của static có khi compile> -> include file.h cần dùng lệnh trong Ct và dùng. Khi distribute thì gửi file .a.
+
+=> Như v ta hoàn toàn k cần phải include từng file .h vào dự án làm nó có header dài ra. Ta chỉ cần xử lý đúng 2 đường link INCLUDEPATH(với thư viện tĩnh) và LIBS(vs cả tĩnh và động). INCLUDEPATH sẽ tới thư mục chứa file .h/.cpp./.c còn LIBS chứa .dll/.a
+
+Cách tạo và dùng plugin trong Qt: cần tạo plugin, tạo app sử dụng plugin, dùng nó trong app
+Tạo plugin: dùng empty qmake project -> khai báo TEMPLATE = lib (nó sẽ k có file main để tạo exe, như này sẽ bảo nó k phải tìm hàm main làm gì), TARGET = <tên plugin>(có thể dùng về sau), CONFIG += plugin(để khai báo rằng nó là 1 plugin), VERSION = 1.0.0(cái này là bắt buộc khi dùng TEMPLATE, nó như 1 app riêng nên cần có version) -> khai báo 1 file.h làm interface: định nghĩa ra 1 class vs các virtual hàm muốn dùng trong plugin(k co constructor), include QObject(để dùng marco) và khai báo marco rằng đây là 1 interface Q_DECLARE_INTERFACE(,) 1 là cái class là interface, 2 là indentifer là cái duy nhất như ID của interface v(nếu class đc khai báo trong 1 namespace thì phải dùng marco này ở ngoài namespace) -> khai báo cặp file h/cpp là plugin của ta kế thừa từ QObject(để dùng marco) và KẾ THỪA CẢ CÁI interface kia(plugin phải là implementation of interface):include <QtPlugin>, thêm Q_OBJECT(kiểu gì chả có signal slot);Q_INTERFACES(<interface>)(báo nó là implementation of interface nào); khai báo Q_PLUGIN_METADATA(IID "" FILE "") là bắt buộc và ! vì plugin phải có thông tin riêng, IID tương tự là id của interface mà plugin dùng(nên khai báo đúng) và FILE là optional là file .json chứa metadata(cung cấp thêm thông tin) cho plugin k có thì bỏ. Điều đb là marco này bắt buộc phải có ở phiên bản qt5 trở lên để báo hiệu rằng nó là 1 plugin và ta k cần dùng Q_EXPORT_PLUGIN2 như ở phiên bản Qt<5 nx->sau đó ta khai báo tất cả hàm trong interface muốn dùng như nào là xong. Ở các phiên bản thấp hơn, ta phải dùng Q_EXPORT_PLUGIN2 vs tên trong biến TARGET trùng với class ở file cpp->k qtr
+
+Tạo app dùng plugin(nó khá giống dll): build plugin sẽ có dll(có file dll là xong khỏi cần app nx) -> ta nhét file interface.h vào trong app(add Existing File(nên copy file h vào thư mục app vì trỏ đến file h chỗ khác nó k gọn))(thì mới dùng đc các hàm bên trong plugins) -> tạo biến QPluginLoader truyền vào đường dẫn file dll of plugin(biến này sẽ load cái plugin của ta at run-time) -> lấy cái instance của file dll đó và cast sang biến interface đã có trong file interface.h của ta -> dùng bth
+(ta biết là 1 abstract thì k thể khai báo biến đc(vì k có implementation) nhưng ở đây biến của ta là plugin có implement r nên ta ms cast sang và dùng đc)
+(vs plugin ta k cần chỉnh sửa gì file pro ở phía app hết khác vs thư viện, cứ nhét file đúng vị trí và dùng thôi)
+
+Ngoài ra còn có các biến khác trong pro file, như QMAKE_PROJECT_NAME=<tên>(xác định tên của project khi phát nhưng chỉ dùng cho VS); biến TARGET mặc định sẽ mang tên app là tên dự án(file pro) và ta có thể đổi lại hiện tên app .exe ntn theo ý ta; Trong qt cx có sẵn tập hợp các biến môi trường như QT_INSTALL_PLUGINS,QT_INSTALL_EXAMPLES giúp xác định đường dẫn tới các thư mục mặc định của qt khi cài qt;các marco có thể dùng như: QT_VERSION trả về version hiện tại or QT_MAJOR_VERSION vì qt có thể có đa số các hàm ở version nào -> 2 cái khá như nhau; greaterThan là 1 hàm trong makefile(có cả hàm); Khi ta cần deploy cái app của ta thì cx cần dùng, target là 1 biến lưu, target.path của nó giúp specific cái đường dẫn khi ta deploy app. Biến INSTALLS+= target sẽ specific đường dẫn install ở đâu -> cần test thêm; isEmpty có tác dụng kiểm tra xem có trống k; khi dùng giá trị của biến trong đường dẫn trong makefile thì phải dùng $$ vì Ct sẽ đọc là $, cx như \\ đọc là \;
+QT_VERSION_CHECK(,,) marco kiểm tra version nhận major,minor,patch. 1 version bh cx có 3 thành phần VD: 4.2.1 tức là major=4, minor=2, patch=1. major tăng khi 1 sự thay đổi lớn xuất hiện(rủi ro cao), minor tăng khi chỉ thay đổi mức độ medium xuất hiện(rủi ro tb), patch tăng khi 1 bản vá đc xuất hiện(rủi ro thấp). Đó là lý do các phiên bản alpha,beta là pre-release có 0.x.y là phiên bản thử nghiệm nên có số 0, và họ chỉ mới bổ sung và sửa đổi để phù hợp release chứ chưa xuất bản. QT_VERSION trả ra số éo hiểu gì cả, ta có thể kiểm tra có lớn hơn version 5 của qt k. VD:
+#include <QtGlobal>//để dùng các marco QT_VERSION
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
+#include <QtWidgets>
+#else
+#include <QtGui>
+#endif
+Trong qt example họ dùng TARGET=$$qtLibraryTarget(<tên>) với plugin or thư viện và vì qtLibraryTarget là cái mà họ specific như 1 biến môi trường rằng đây là 1 Lib target nó k khác biệt với khai báo TT là mấy.
+
+
+
+# Deploy
+Chế độ build profile là nằm ở giữa debug và release ít dùng.
+
+-> Cách deploy: 
+Add các dependencies vào cùng 1 chỗ app. Thêm thủ công bằng cách thêm các file dll ở trong máy mà Ct cần nhưng cách này gây 1 số lỗi có thể éo tìm ra đc.
+=> Dùng tool deploy có sẵn windeployqt ở trong thư mục bin (cùng vị trí vs các file dll), k thể mở trực tiếp mà dùng Qt cmd: ta cần chọn đúng thư mục ming 32 hay 64 tùy vào ta build ntn -> mở commandPrompt for Qt -> chỉ cần lấy file exe của qt ra 1 thư mục khác mà ta deploy vào đó -> cd trỏ đến nơi có cái file exe đó
+Gõ windeployqt -h -> gõ windeployqt <link đến file exe cần deploy> => thế là mọi thứ đc add, ta mở file exe đó ra là có r
+
+-> Cách cài app thành 1 file installer duy nhất sau khi deploy:
+1 folder installer cơ bản thì có: 1 thư mục config gồm 1 file xml chứa thông tin về app như tên, version; 1 thư mục packages gồm các components, có thể có nhiều components vì khi ta cài 1 app thì có thể có nhiều component ta muốn cài, và khi cài thì ta có quyền chọn cài component nào. Mỗi component có thư mục data, meta. Thư mục data chứa file exe với dependencies(dll) deploy bên trên. Còn meta chứa nhiều file, trong đó có 1 file package.xml chứa thông tin về vc install.
+Làm với tool Qt Installer Framework: tải về -> download.qt.io -> official release -> qt_installer_framework -> tải về cho bản window -> cài. 
+Thư mục có 2 cái qtr: bin có binarycreator là Ct exe làm nv gom các file lại thành 1 cái installer (k thể chạy tt mà dùng qt cmd vs các exe đi kèm app); 2 là example có các ví dụ về file cài đặt cứ lấy 1 cái mà dùng
+
+VD: dùng example cơ bản là tutorial -> copy sang nơi muốn tạo, đổi tên và chỉnh sửa các file thành nội dung của ta và xóa các thứ k cần thiết -> chú ý file chỉnh thông tin ở config.xml và package.xml và copy các dependencies với exe vào thư mục data. 
+Khi chỉnh sửa cái script ta bỏ đi vì khác phức tạp chưa học chuyển thành <Default>true</Default>
+-> Mở qt cmd -> trỏ đến binarycreator -> <link tuyệt đối đến binarycreator>\binarycreator.exe -c config\config.xml -p packages <tên app>.exe 
+=> Nếu ta muốn cái app của ta xuất hiện trên thanh start menu của window thì cần chọn examples khác
+
+-> Khi tạo ứng dụng android, khó để chạy được với mọi thiết bị android. Có thể tạo 1 file apk duy nhất cùng với code và resource nhắm đến từng máy riêng với multiAPKs, hoặc 1 file APK chạy trên mọi thiết bị nhưng muốn tương thích với càng nhiều thiết bị thì file sẽ càng phình to ra. Google cho ra đời Android App Bundle định dạng .aab thay thế file APK. Ta chỉ cần publish 1 gói ứng dụng .aab thì google play sẽ lo phần còn lại, ai dùng máy gì tải gg play sẽ dùng dynamic feature APKs tương thích với từng thiết bị
+
+
+
+# Dùng zip trong Qt
+Qt hỗ trợ API với qCompress và qUncompressed nhưng chỉ thao tác với 1 file -> K nén đc cả thư mục nên k dùng. Ta sẽ dùng QuaZIP, 1 wrapper class của zlib
+
+Các bước: Vào http://quazip.sourceforge.net/ tải về QuaZIP -> vào http://www.zlib.net/ tải về zlib, nó free opensouce -> giải nén. 
+Do zlib là thư viện chung chứ kp của riêng qt nên ta compile bằng cmd có mingw: vào Qt cmd trỏ tới thư mục của zlib chứa makefile -> chạy mingw32-make -f <tên makefile> -> có file .a và .dll cần dùng.
+Bh ta LIBS dùng TT luôn cx đc nhưng ta sẽ compile thêm thư viện động quazip là wrapper có sẵn: mở file pro của wrapper -> nhét tất cả các file dll/a vừa có vào 1 thư mục LIBS -> vào file quazip.pro và thêm LIBS tới từng file trong đó -> compile phát là ra file dll của thư viện động quazip chứa class wrapper(nên thêm cả INCLUDEPATH)
+Dùng wrapper trong dự án: Ta LIBS += tới các file dll; INCLUDEPATH tới thư mục include(tạo thư mục include chứa tất cả file h, cpp, c của zlib và quazib); Tuy nhiên như v là chưa đủ, ta còn phải trỏ đến file thư mục lib chứa các file dll nx. Chú ý khi dùng thư viện bên thứ 3 thì cần làm thêm thao tác đó và cái LIBS này sẽ có ký hiệu -L"<link tới libs chứa các dll/a>" đằng trước. Chính cái class wrapper kia cũng là 1 thư viện nên ta LIBS và INCLUDEPATH đến cả nó và zlib
+Mỗi lần tạo dự án cần dùng: thêm LIBS,INCLUDEPATH và LIBS đb với -L là xong
+Nếu ta làm nv là nhanh gọn và xong r, nhưng chẳng hạn ta muốn xem các class của ta có những hàm gì ngay trên chính project hiện tại thì có thể thêm HEADERS/SOURCES += vào với những file có cac hàm muốn xem. Nó sẽ tự động thêm vào dự án
+
+Ví dụ khi ta dùng trên Linux mà makefile sẽ có code dạng khác thì có thể dùng:
+win32 { <nội dùng makefile ở win32> } 
+win64 { <nội dùng makefile ở win64> }
+unix { <nội dung makefile dùng trong unix> )
+DEPENDPATH là nơi chứa dependencies cx khá giống INCLUDEPATH
+
+Ở bên trên ta dùng 1 class wrapper để chỉ dùng hàm. Tuy nhiên cx có 1 số ng làm ra các class khác dùng zlib tạo ra như 1 biến. Đó là QZipReader và QZipWriter chỉ có điều nó k phải là 1 phần của Qt API nên là code có thể bị lỗi khi các bản cập nhật mới ra mắt. Ta sẽ dùng nó trong Qt:
+Tải qzipwriter_p.h, qzipreader_p.h và qzip.cpp về -> k dùng wrapper nên ta import zlib vào trực tiếp dự án như cũ với INCLUDEPATH và LIBS -> sửa đổi tên class or tên file theo ý thích và sử dụng với replace all
+Sử dụng trên linux thì ok nhưng trên window thì phải thay đổi-> ta xóa các marco NAMESPACE và các marco tương tự khỏi các file h vì window k hỗ trợ dùng nó trong file h.
+
+Thật ra bên cạnh vc linking static và dll or pluginloader thì còn có 1 cách nx đó là copy source vào project của ta mà sử dụng trực tiếp luôn. Ở TH này ta dùng QZipReader và QZipWriter là như v, cũng giống với thư viện Botan ta dùng TT source code vào dự án. Tùy ng tạo ra họ muốn dùng nv or dùng kiểu thư viện ta phải tự hiểu.
+
+
+
+# Connect SQL DB
+Kết nối chỉ cần 3 TP: server name hay host name là tên server chứa CSDL, đó là SQLEXPRESS khi ta tạo vs tên mặc định, ta cần truyền đường dẫn tới SQLEXPRESS đó, thg là LOCALHOST or tên máy DESKTOP-<>; driver là cái trình điều khiển giúp ta kết nối từ app sang database, là cái ở bên phía client chứ kp bên phía server. Nên dùng ODBC là driver của microsoft, trong Qt có rất nhiều driver và cũng có thể dùng ODBC là "QODBC", cho phép kết nối tới Microsoft SQL Server và các database khác tuân theo ODBC; dsn hay nguồn ODBC là nơi chứa thông tin về tên server, mật khẩu, tài khoản, driver(của máy tính có sẵn(client) kết nối vs SQL Server), trạng thái.
+
+Để tìm các thông số dsn: tên server hiện ngay đầu, tên database là cái ta tạo ez, tên driver dùng trong OS kết nối vs SQL server trong control panel ODBC driver là các driver có trong máy. USID và PASS là tk và mk tùy vào lúc ta connect server -> nếu ta chọn authentication là sql server thì sẽ dùng tk và mk trên SQL Server
+
+Có hai cách connect: cần dsn để xác định liên kết vs Database nào/ cần server để biết connect server nào/ cần driver để thao tác đc vs database
+C1 (string connection)
+C2 (tạo 1 dsn trên máy đến cái database cần connect và dùng): ta tạo 1 cái QSqlDatabase bth vs driver và set cho cái server bằng setHostName và setDatabaseName cho cái dsn và open để dùng => dsn đó ta k dùng connection string nx mà ta tạo trong control panel trong UserDSN(chọn systemDSN có thể lỗi) -> tức là thay vì tạo trong Qt thì ta tạo trong máy 1 DSN nguồn open database connectivity kết nối đến cái SQL server sẵn r dùng cái tên dsn đó trên các ưng dụng cần kết noi là xong. Ta cần tự gõ cái tên Sql Server và 1 dsn chỉ đc kết nối vs 1 database nên cần setdefault database connection là database cần connect (khi có nh database mà k set sẽ lỗi)
+
+
+
+# Viết test với Qt
+Tạo file .h và file .cpp chứa cái hàm của ta, hàm đó là test case -> include <QtTest> -> sau đó ta dùng hàm cần kiểm tra trong test case -> thêm QTEST_MAIN (tên class test) ở cuối cpp -> vào file pro thêm QT+=testlib -> run phát là xong.
+=> namespace QTest cung cho ta rất nhiều hàm và marco để phục vụ cho vc test như QVERIFY(condition), QCOMPARE(actual,expected),.. và QTEST_MAIN cx là marco. Để dùng ta include <QtTest> đã là có mọi module của Qt để test r. 
+marco QTEST_MAIN sẽ thay thế hàm main nên ở TH trên chỉ cần có file cpp và h mà k có hàm main() -> thật ra bên trong marco này cũng chỉ gọi hàm main và rất nhiều hàm/marco kiểm tra, init,.. cuối cùng thì invoke cái method của ta và cleanup.
+Tuy nhiên cũng như nhiều IDE khác luôn hỗ trợ unit test. Để dùng trong Qt, tạo project auto test project -> kết quả cũng sẽ cho tương tự nhưng lại chỉ tạo ra 1 file cpp với definition chung với declaration -> marco QTEST_APPLESS_MAIN lúc này thay thế QTEST_MAIN tương tự -> nhưng ta lại phải include mocfile của cái class của ta.
+moc file(meta-object compiler): mỗi class có 1 moc file như v ta có thể generate ra trong qt bằng qt commandprompt -> cd vào thư mục bin của mingw của qt -> (copy dự án vào ổ C từ trc vì nó k vô đc ổ B) -> moc.exe "<link file chứa class>" > "<link file.moc muốn tạo ra>" -> sau đó ta dùng file.moc như thế nào tùy ý. Ta cx có thể tạo file.moc bằng makefile có rule là foo.o:foo.moc và foo.moc:...<tạo ra từ đâu>.
+moc file dùng cho các class kế thừa từ QObject.
+có thể k dùng file.moc mà dùng .cpp cx đc vd: mocfile.cpp.
+=> KQ trả về sau khi chạy là kiểu liệt kê ra hàm nào PASS, hàm nào bị FAIL.
+
+Có thể thêm CONFIG += testcase vào pro sẽ dùng make check để run hoặc CONFIG += no_testcase_installs sẽ cản nó install vào TARGET
+Hay hơn là chạy test trên Qt cmd: <tên file exe> <tên hàm cần test> <variable>
+Các hàm khác của Qt cmd: qmake -project "<nội dung thêm vào file pro, vd: CONFIG+=release>" sẽ tự động thêm nội dung vào file pro
+
+Có framework TUG chuyên để test phần mềm qt, ví dụ khi dùng TUG để test 1 hàm nó sẽ tự nảy số liên tục và cho ra TH fail thay vì ta gõ từng TH. Cũng có những test automation framework để test tự động khi thay đổi code.
+
+
+
+# Window service
+Qt Solutions Archive là 1 component của Qt hỗ trợ nhiều thứ trong đó có window services => deprecated.
+Tạo Window Service trong Qt với Qt Solution: Tải qt solution về -> mở qtsolution ra và fix các lỗi nếu có -> include nó trong file pro để dùng trong code (tùy vào project dùng cái gì khác nhau mà ta phải include chuẩn) -> dùng cj thì ta cần include src(tức source code) ở trong file pro và lại vào các file bên trong đó xem vị trí các thứ ở đấy nó include cái gì khác thì chỉnh đến đúng nơi
+-> Cụ thể với service, ta vào file pro của ta: include tới file pri của qtservice (tốt nhất nên copy cái folder chứa nó vào cùng folder dự án cho tiện) -> vào file pri đó thấy nó include common.pri thì ta lại phải chỉnh đường dẫn đó tới đúng nơi có common.pri
+(-> Sau khi add vào rồi thì nó như 1 phần code của ta -> ta tiếp tục sử dụng như bth, phải hiểu là ta cần làm j, nó giúp ta cái gì cứ đọc document phần comment ở trong code r bắt chước example là đc). 
+-> Rule of usage và class reference của service đều ở trên google (vd: docs.huihoo.com) -> viết service
+
+DEFINES += QT_DEPRECATED_WARNINGS
+Trong Qt Creator ta có thể dùng cmd để truyền argc,argv bằng cách: Projects -> RunSetting -> dùng Command Line Arguments.
+
+Để 1 service chạy cần: install nó -> start nó.
+Để install: 1> dùng sc command của cmd window(trong linux cx tương tự có command khác để cài service); 2> dùng 1 ứng dụng có QServiceController và dùng hàm install của nó để install cái service này; 3> dùng commandline của qt với đối số -install 
+
+Ta có thể dùng controller có sẵn trong phần example với command line là: -i "<link tới file exe của service>"
+Trong qt commandline có các default option command là -exec(chạy 1 service như 1 ct bth->để debug), -uninstall(uninstall service sau khi -install). Nếu ta k dùng command line mà trực tiếp chạy là sai.
+Ta cx có thể chạy như 1 Ct bth trong cmd với: "<link tới file exe>" -e => dó là chạy để debug nên nó tự chạy vào start luôn và kết thúc luôn, chưa phải là 1 service
+
+
+
+# Other: 
+-> Cách thêm 1 lib bất kỳ vào qmake: Tải 1 bản gì đó ở trên mạng về thì luôn xuất hiện 1 folder chứa các file dll -> ta thêm LIBS+=-L<link đến directory chứa dll> và thêm LIBS+=-l<tên file.dll trong cái link kia muốn dùng> => Khi muốn cài cái gì vào qt thì cũng link file dll của nó nv
+Cài mingw cho qt các phiên bản: tải về và mở Tools -> Options -> Kits -> Debugger -> Add vào là dùng
+
+-> Shared compilation và static compilation: 
+Bth ta dùng shared compilation để tạo ra phần mềm thì nó thiếu file dl -> nguyên nhân là khi ta compile thì nó shared để dùng chung file dll có sẵn trong qt 
+Còn static compilation sẽ compile các file dll kèm luôn với file exe -> 1 file exe duy nhất. Static compile k hoàn toàn apply toàn bộ dll vào exe mà nó sẽ chừa lại các file dll có sẵn trong window hỗ trợ k cần đính kèm, nhưng khi xuất ra vẫn chỉ có 1 exe đáp sang máy win khác chạy vẫn đc -> static file exe sẽ nặng hơn.
+
+-> Pb: file exe là tập tin cài đặt và chạy ứng dụng windows do ta tự tay tùy chỉnh
+file msi(microsoft installer) khi cài đặt ứng dụng window thì ta k cần làm gì trong quá trình cài đặt 
+File .exe cho phép kiểm soát hoàn toàn quá trình cấu hình ứng dụng là loại file thường chọn để tải
+Chỉ có thể cài đặt một file .msi 1 lúc trong khi có thể cài đặt nhiều file .exe cùng lúc
+
+-> Phân biệt: Windows là 1 họ hệ điều hành với nh phiên bản và công dụng khác nhau, trong đó nổi bật là window desktop và window server. 
+Window Server là 1 nhánh của hệ điều hành máy chủ của microsoft, thường dùng làm các server. Nó thích hợp các lập trình cơ sở dữ liệu như Access, MSSQL.
+Window Desktop là Ct phần mềm máy tính quản lý phần cứng tài nguyên máy tính, cung cấp môi trường làm vc như máy tính của ta bh đang dùng
+
+-> VD: khi tạo ra 1 plugin SDK mà bên trong ta dùng 1 cái thư viện rất lớn bên thứ 3, VD zlib thì mỗi lần compile thì nó sẽ compile lại toàn bộ zlib bị lâu. Vì khi chạy xong thư viện thì cx chỉ tạo ra dll là cùng nên có thể viết trong file pro (makefile) là nếu file dll tồn tại thì sẽ k build lại nó nx. 
+
+-> Qt6 compile dùng build system là CMake thay cho qmake. CMake và qmake là 1 system quản lý quá trình build, tạo makefile.
+Khi tạo biến tuân thủ convention là m_<tên biến private> thì ta có thể rightclick + add getter và setter để tạo ra hàm set get mặc định chuẩn. Qt chính là framework dạy hướng đối tượng rất tốt.
+
+-> VD: Thư viện Botan mã nguồn mở C++ giúp mã hóa file.
+Cách thêm 1 thư viện dll bên ngoài vào trong Qt: Ta tải nguồn của thư viện bên ngoài về -> Khi tải về đc 1 bộ thư viện là 1 thư mục trong ổ, bên trong có file lib.dll và 1 thư mục include -> để sử dụng nó trong Ct Qt, ta phải vào file pro và INCLUDEPATH += "<đg dẫn đến thư mục include>" và LIBS += "<đường dẫn đến lib.dll>"-> như v ta cứ include trong main mà dùng nhưng mà sẽ k chạy đc, ta cần copy toàn bộ file dll sang cùng cấp thư mục debug để compile
+
+-> Doxygen là 1 công cụ giúp auto tạo ra file văn bản doc là kiểu tài liệu doxygen chú thích về code, việc ta dùng:
+/**
+*
+*
+**/ cx chính là vc tạo ra doxygen, nó phục vụ cho tính năng rê chuột và F1.
+
+-> Phân biệt các kiểu cast:
+- (type)object và type(object) là C-style cast, nó giống như ép kiểu ngầm định nhưng ta thực hiện nó không ngầm định mà thôi. Đương nhiên là kiểu cast nó phải chuẩn.
+- static_cast<type>(object) là kiểu cast đơn giản nhất thực hiện lúc compile time, nó dùng mạnh hơn kiểu cast trc. Nó có thể dùng để cast class với điều kiện kế thừa, k thể dùng cast sang 1 class khác biệt ht. 
+- dynamic_cast dùng cast xuyên class, lên or xuống khi kế thừa, nó sẽ cố tìm object để cast nếu có thể -> vẫn có thể k cast đc khi class khác trả về std::bad_cast
+- const_cast chuyển từ 1 const sang 1 biến k là const, làm mất tc hằng số của biến
+- reinterpret_cast dùng rất nguy hiểm, nó cast trực tiếp từ 1 cái gì sang 1 cái khác, copy TT
+
