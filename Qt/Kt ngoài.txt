@@ -48,4 +48,6 @@ SUBDIRS += Plugins
 $PWD (hay $$PWD dùng trong đường link) là print working directory tức in ra đường dẫn thư mục làm vc hiện tại
 $$quote(<thứ muốn đưa vào trong cặp "" thì nhét vào như này>)
 
+Cách thêm 1 lib bất kỳ vào qmake: Tải 1 bản gì đó ở trên mạng về thì luôn xuất hiện 1 folder chứa các file dll -> ta thêm LIBS+=-L<link đến directory chứa dll> và thêm LIBS+=-l<tên file.dll trong cái link kia muốn dùng> => Khi muốn cài cái gì vào qt thì cũng link file dll của nó nv
+Cài mingw cho qt các phiên bản: tải về và mở Tools -> Options -> Kits -> Debugger -> Add vào là dùng
 

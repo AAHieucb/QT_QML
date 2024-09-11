@@ -1,6 +1,5 @@
 QML (Qt Modeling Language)
-Dùng mô tả giao diện CT. HTML có CSS thì Qt có QML.
-QtQuick là thư viện giúp code với ngôn ngữ QML, hỗ trợ mobile. Còn Felgo chỉ là 1 third-party sử dụng qml.
+QtQuick là thư viện giúp code với ngôn ngữ QML, để mô tả giao diện, hỗ trợ mobile. Còn Felgo chỉ là 1 third-party sử dụng qml.
 QML là FE tạo giao diện người dùng, còn C++ là BE. VD ta k nên xử lý logic như encryption chẳng hạn ở front end mà nên dùng C++ để làm. 
 VD: ta có 1 model xử lý dữ liệu ở backend C++ và dùng QML để hiển thị dạng bảng or chart,.. Nhưng qml rất mạnh, nếu thích có thể xử lý model ở front end luôn nếu thích vì qml hỗ trợ code js mà
 
@@ -54,25 +53,5 @@ Sau này có thể dùng nó để lưu các thông tin mong muốn. Ta cần si
 Setting app: Khi dùng felgo nó đã tạo sẵn các file manifest và gradle.build r. Nếu k có thì trong project phải create template ra những file đó. Trong file manijest cần chỉnh sửa minimum required SDK và target SDK, version, name, icon, permission. Chỉnh sửa chúng cả trong file pro nx.
 
 Sau khi compile sẽ ra 1 file apk or aab trong thư mục, chỉ cần file đó để gửi lên gg play
-
--> Các cách lấy dữ liệu từ 1 website: 
-1) Ta có thể crawl data từ website -> lưu vào chính cơ sở dữ liệu của ta -> dùng data từ cơ sở dữ liệu đó -> vc này có thể bị chặn bằng captcha
-2) Ta có thể dùng web service, chính là các giao thức HTTP qua API. Tuy nhiên để làm đc điều này cần phải biết API của website là gì, biết các giao thức GET POST gửi đi cái gì và nhận đc json hay xml như thế nào để sử dụng
-3) Nếu trang web mà có RSS thì có thể crawl dữ liệu RSS của trang web.
-4) Mò được API của 1 web nhờ vào việc bắt được các gói tin truyền đi và về => chưa đủ trình vì tab network nó éo đúng đâu
-
--> WordPress API: VD trang lovehand ta gọi GET API các trang sau
-https://lovehands.vn/wp-json/wp/v2/ => ra các route ta có thể get đc
-https://lovehands.vn/wp-json/wp/v2/posts => ra các post, mặc định của wordpress là 10 posts 1 page
-https://lovehands.vn/wp-json/wp/v2/posts?page=2 => ra 10 post tiếp theo từ 10 đến post thứ 20 -> làm kiểu loading ấy
-https://lovehands.vn/wp-json/wp/v2/posts?per_page=99 => ra max là 99 posts luôn chứ k còn 10 post nx
-https://lovehands.vn/wp-json/wp/v2/posts/:id => ra 1 post cụ thể có id nào
-https://lovehands.vn/wp-json/wp/v2/posts?slug=cay-thong-dat => ra 1 post có slug là gì, slug là 1 cái giống tiêu đề nhưng dù sao ta cx chả kiểm soát đc
-https://lovehands.vn/wp-json/wp/v2/posts?categories=141&per_page=99 => max 99 posts có chuyên mục có id là 141. Vì các posts trong wordpress chia theo chuyên mục
-https://lovehands.vn/wp-json/wp/v2/categories => ra list các categories
-https://lovehands.vn/wp-json/wp/v2/categories?slug=giai-tri => ra categories có slug là giai-tri -> kp post nên k xem đc nội dung nhưng có thể lấy đc id
-https://lovehands.vn/wp-json/wp/v2/categories/:id => ra categories có id là cái kia
-
--> RapidAPI là 1 trang web cung cấp các chức năng api. VD ta muốn chuyển văn bản thành giọng nói có thể search text-to-speech api có sẵn và dùng luôn -> gửi dữ liệu đi xong nhận về file giọng nói chẳng hạn. Để dùng nhiều api yêu cầu api key or token ta phải vào trang web của họ để tìm hiểu cái đó. 
 
 

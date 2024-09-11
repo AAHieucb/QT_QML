@@ -11,12 +11,10 @@ Qt Designer giúp tạo ra file ui phức tạp hơn
 
 
 
-# OpenSSL
+# Dùng OpenSSL trong Qt
 Là thư viện phần mềm cho các ứng dụng bảo mật truyền thông mạng. VD nó có lệnh command tạo pub/piv key làm chứng chỉ ssl cho trang web.
 Setup Qt openssl: tải open ssl win 32 về -> vào pro file thêm vào LIBS tới nó và thư mục bin+ dẫn tới 2 thư mục dll mà ta cần dùng -> build đúng chế độ phiên bản
 Qt có QSsl tương tác với Openssl
-
--> Luồng: Client gửi message "hello", khởi tạo 1 handshake từ client tới server. Message đó bao gồm TLS version mà client hỗ trợ, cipher suite mà client hỗ trợ và 1 chuỗi random string -> server gửi lại client message bao gồm server's ssl cerfiticates, server's chosen cipher suite, another random string tạo bởi server -> client verify the server's ssl cerf bằng cách gửi cho authority bên thứ 3 phát hành cái cerf đó để xác nhận thành công -> client gửi tiếp 1 random string gọi là premaster secret, được mã hóa bởi public key và chỉ đc giải mã bằng private key (vì client nhận public key từ chứng chỉ ssl của server) -> server giải mã premaster secret bằng private ke y -> cả client và server sẽ tạo ra session key từ client random string, server random và premaster secret-> client gửi message "finished" đc mã hóa bởi session key (client is ready để trao đổi) -> server send "finished" message đc mã hóa bởi session key(khóa phiên chỉ dùng đc trong phiên đó) -> the handshake is completed và cuộc trao đổi diễn ra sử dụng session keys ( => đó là thuật toán RSA)
 
 -> Link OpenSSL dll
 Thêm file dll vào qt cmake: cmake cung các hàm thao tác bên trong
@@ -67,21 +65,16 @@ Server chấp nhận kết nối và giao tiếp -> qtr client gửi tin trải 
 
 
 
-# Single instance application
+# Qt single instance application
 Là ứng dụng chỉ chạy 1 instance trong 1 lúc. Ví dụ ta có thể mở nhiều app notepad 1 lúc vì nó là multiple instance application. Còn game ví dụ ta mở LoL thì chỉ mở đc 1 cái, nếu click đúp để mở thêm 1 app nx thì nó éo chạy mà sẽ focus hiện vào cái đã mở vì là single instance app.
 
 Để tạo ra single application thì ý tưởng là: ta chạy Ct thì ta cho mỗi instance của app sẽ kết nối tới 1 cái server xác định. Xong mỗi khi vào app ta sẽ kiểm tra, nếu cái instance này đã kết nối với server(tức nó đã tồn tại) thì exit nó luôn(return 0;). Còn nếu cái instance này chưa kết nối tới server thì tạo ra server để các lần kết nối sau sẽ thành công. Ta còn có thể điều khiển nếu đã kết nối server thì trc khi tắt đi, ta lấy một vài thông tin từ nó và dùng nó trong cái instance lần đầu bật->đương nhiên lấy thông tin thông qua server là trung gian r.
 Cái server ở đây là gì? Đương nhiên ta k thể dùng 1 cái server j bên ngoài r->ta sẽ tự tạo server trong app và cho nó kết nối.
 Trong Qt: phiên bản cũ có QtSingleApplication giúp tạo instance app với cơ chế tương tự, ta vẫn có thể tải về dùng nhưng k nên dùng nhiều code lỗi thời. Hiện tại, Qt cung cấp QLocalServer và QLocalSocket mà ta sẽ dùng tạo single app. Nhớ thêm module network.
 
--> Ta truyền dữ liệu giữa các process bằng các kênh pipe. Có 2 loại pipe(Pipe stream):
-Anonymous Pipe: cho phép giao tiếp giữa các máy tính cục bộ, thg dùng làm kênh giao tiếp giữa các thread hay các process. Chỉ truyền tải 1 chiều, k dùng đc thông qua mạng
-Named Pipe: hoạt động theo theo mô hình client/server. Hỗ trợ giao tiếp 2 chiều và có hoạt động thông qua mạng. Để sử dụng thì tạo client/server và connect thôi. Nhiều chức năng hơn anonymous pipe.
-Về cơ bản nó khá giống socket client và server bth.
 
 
-
-# Static và dll
+# Static và dll qt
 Tạo và dùng dll trong qt: Trong C++ lib chọn shared library -> trong file pro sẽ có TEMPLATE=lib -> tạo sẵn 2 file .h, trong đó file global sẽ định nghĩa marco. Khi compile thì marco sẽ tạo ra symbol, vai trò như 1 cái bookmark báo hiệu rằng shared library có thể export đi -> tạo lệnh -> build nó (k đc run) -> copy .dll của thư viện vào thư mục debug, release của Ct -> chú ý compile file dll ở 32 hay 64 thì phải đúng -> vào file pro: LIBS += <path tới file dll> -> include file h và dùng. Khi distribute app thì gửi exe và dll
 
 Cách tạo và dùng static lib trong qt: trong C++ lib chọn statically linked library -> viết code cho thư viện -> compile sẽ có file.a -> vào file pro của Ct: INCLUDEPATH += <link tới thư mục chứa file.h của static>(thư mục chứa file .h đó là thg gọi là thư mục include) và LIBS += <link tới file .a của static có khi compile> -> include file.h cần dùng lệnh trong Ct và dùng. Khi distribute thì gửi file .a.
@@ -107,28 +100,6 @@ Trong qt example họ dùng TARGET=$$qtLibraryTarget(<tên>) với plugin or th�
 
 
 
-# Deploy
-Chế độ build profile là nằm ở giữa debug và release ít dùng.
-
--> Cách deploy: 
-Add các dependencies vào cùng 1 chỗ app. Thêm thủ công bằng cách thêm các file dll ở trong máy mà Ct cần nhưng cách này gây 1 số lỗi có thể éo tìm ra đc.
-=> Dùng tool deploy có sẵn windeployqt ở trong thư mục bin (cùng vị trí vs các file dll), k thể mở trực tiếp mà dùng Qt cmd: ta cần chọn đúng thư mục ming 32 hay 64 tùy vào ta build ntn -> mở commandPrompt for Qt -> chỉ cần lấy file exe của qt ra 1 thư mục khác mà ta deploy vào đó -> cd trỏ đến nơi có cái file exe đó
-Gõ windeployqt -h -> gõ windeployqt <link đến file exe cần deploy> => thế là mọi thứ đc add, ta mở file exe đó ra là có r
-
--> Cách cài app thành 1 file installer duy nhất sau khi deploy:
-1 folder installer cơ bản thì có: 1 thư mục config gồm 1 file xml chứa thông tin về app như tên, version; 1 thư mục packages gồm các components, có thể có nhiều components vì khi ta cài 1 app thì có thể có nhiều component ta muốn cài, và khi cài thì ta có quyền chọn cài component nào. Mỗi component có thư mục data, meta. Thư mục data chứa file exe với dependencies(dll) deploy bên trên. Còn meta chứa nhiều file, trong đó có 1 file package.xml chứa thông tin về vc install.
-Làm với tool Qt Installer Framework: tải về -> download.qt.io -> official release -> qt_installer_framework -> tải về cho bản window -> cài. 
-Thư mục có 2 cái qtr: bin có binarycreator là Ct exe làm nv gom các file lại thành 1 cái installer (k thể chạy tt mà dùng qt cmd vs các exe đi kèm app); 2 là example có các ví dụ về file cài đặt cứ lấy 1 cái mà dùng
-
-VD: dùng example cơ bản là tutorial -> copy sang nơi muốn tạo, đổi tên và chỉnh sửa các file thành nội dung của ta và xóa các thứ k cần thiết -> chú ý file chỉnh thông tin ở config.xml và package.xml và copy các dependencies với exe vào thư mục data. 
-Khi chỉnh sửa cái script ta bỏ đi vì khác phức tạp chưa học chuyển thành <Default>true</Default>
--> Mở qt cmd -> trỏ đến binarycreator -> <link tuyệt đối đến binarycreator>\binarycreator.exe -c config\config.xml -p packages <tên app>.exe 
-=> Nếu ta muốn cái app của ta xuất hiện trên thanh start menu của window thì cần chọn examples khác
-
--> Khi tạo ứng dụng android, khó để chạy được với mọi thiết bị android. Có thể tạo 1 file apk duy nhất cùng với code và resource nhắm đến từng máy riêng với multiAPKs, hoặc 1 file APK chạy trên mọi thiết bị nhưng muốn tương thích với càng nhiều thiết bị thì file sẽ càng phình to ra. Google cho ra đời Android App Bundle định dạng .aab thay thế file APK. Ta chỉ cần publish 1 gói ứng dụng .aab thì google play sẽ lo phần còn lại, ai dùng máy gì tải gg play sẽ dùng dynamic feature APKs tương thích với từng thiết bị
-
-
-
 # Dùng zip trong Qt
 Qt hỗ trợ API với qCompress và qUncompressed nhưng chỉ thao tác với 1 file -> K nén đc cả thư mục nên k dùng. Ta sẽ dùng QuaZIP, 1 wrapper class của zlib
 
@@ -150,6 +121,28 @@ Tải qzipwriter_p.h, qzipreader_p.h và qzip.cpp về -> k dùng wrapper nên t
 Sử dụng trên linux thì ok nhưng trên window thì phải thay đổi-> ta xóa các marco NAMESPACE và các marco tương tự khỏi các file h vì window k hỗ trợ dùng nó trong file h.
 
 Thật ra bên cạnh vc linking static và dll or pluginloader thì còn có 1 cách nx đó là copy source vào project của ta mà sử dụng trực tiếp luôn. Ở TH này ta dùng QZipReader và QZipWriter là như v, cũng giống với thư viện Botan ta dùng TT source code vào dự án. Tùy ng tạo ra họ muốn dùng nv or dùng kiểu thư viện ta phải tự hiểu.
+
+
+
+# Deploy
+Chế độ build profile là nằm ở giữa debug và release ít dùng.
+
+-> Cách deploy: 
+Add các dependencies vào cùng 1 chỗ app. Thêm thủ công bằng cách thêm các file dll ở trong máy mà Ct cần nhưng cách này gây 1 số lỗi có thể éo tìm ra đc.
+=> Dùng tool deploy có sẵn windeployqt ở trong thư mục bin (cùng vị trí vs các file dll), k thể mở trực tiếp mà dùng Qt cmd: ta cần chọn đúng thư mục ming 32 hay 64 tùy vào ta build ntn -> mở commandPrompt for Qt -> chỉ cần lấy file exe của qt ra 1 thư mục khác mà ta deploy vào đó -> cd trỏ đến nơi có cái file exe đó
+Gõ windeployqt -h -> gõ windeployqt <link đến file exe cần deploy> => thế là mọi thứ đc add, ta mở file exe đó ra là có r
+
+-> Cách cài app thành 1 file installer duy nhất sau khi deploy:
+1 folder installer cơ bản thì có: 1 thư mục config gồm 1 file xml chứa thông tin về app như tên, version; 1 thư mục packages gồm các components, có thể có nhiều components vì khi ta cài 1 app thì có thể có nhiều component ta muốn cài, và khi cài thì ta có quyền chọn cài component nào. Mỗi component có thư mục data, meta. Thư mục data chứa file exe với dependencies(dll) deploy bên trên. Còn meta chứa nhiều file, trong đó có 1 file package.xml chứa thông tin về vc install.
+Làm với tool Qt Installer Framework: tải về -> download.qt.io -> official release -> qt_installer_framework -> tải về cho bản window -> cài. 
+Thư mục có 2 cái qtr: bin có binarycreator là Ct exe làm nv gom các file lại thành 1 cái installer (k thể chạy tt mà dùng qt cmd vs các exe đi kèm app); 2 là example có các ví dụ về file cài đặt cứ lấy 1 cái mà dùng
+
+VD: dùng example cơ bản là tutorial -> copy sang nơi muốn tạo, đổi tên và chỉnh sửa các file thành nội dung của ta và xóa các thứ k cần thiết -> chú ý file chỉnh thông tin ở config.xml và package.xml và copy các dependencies với exe vào thư mục data. 
+Khi chỉnh sửa cái script ta bỏ đi vì khác phức tạp chưa học chuyển thành <Default>true</Default>
+-> Mở qt cmd -> trỏ đến binarycreator -> <link tuyệt đối đến binarycreator>\binarycreator.exe -c config\config.xml -p packages <tên app>.exe 
+=> Nếu ta muốn cái app của ta xuất hiện trên thanh start menu của window thì cần chọn examples khác
+
+-> Khi deploy ứng dụng android, khó để chạy được với mọi thiết bị android. Có thể tạo 1 file apk duy nhất cùng với code và resource nhắm đến từng máy riêng với multiAPKs, hoặc 1 file APK chạy trên mọi thiết bị nhưng muốn tương thích với càng nhiều thiết bị thì file sẽ càng phình to ra. Google cho ra đời Android App Bundle định dạng .aab thay thế file APK. Ta chỉ cần publish 1 gói ứng dụng .aab thì google play sẽ lo phần còn lại, ai dùng máy gì tải gg play sẽ dùng dynamic feature APKs tương thích với từng thiết bị
 
 
 
@@ -201,23 +194,7 @@ Ta cx có thể chạy như 1 Ct bth trong cmd với: "<link tới file exe>" -e
 
 
 
-# Other: 
--> Cách thêm 1 lib bất kỳ vào qmake: Tải 1 bản gì đó ở trên mạng về thì luôn xuất hiện 1 folder chứa các file dll -> ta thêm LIBS+=-L<link đến directory chứa dll> và thêm LIBS+=-l<tên file.dll trong cái link kia muốn dùng> => Khi muốn cài cái gì vào qt thì cũng link file dll của nó nv
-Cài mingw cho qt các phiên bản: tải về và mở Tools -> Options -> Kits -> Debugger -> Add vào là dùng
-
--> Shared compilation và static compilation: 
-Bth ta dùng shared compilation để tạo ra phần mềm thì nó thiếu file dl -> nguyên nhân là khi ta compile thì nó shared để dùng chung file dll có sẵn trong qt 
-Còn static compilation sẽ compile các file dll kèm luôn với file exe -> 1 file exe duy nhất. Static compile k hoàn toàn apply toàn bộ dll vào exe mà nó sẽ chừa lại các file dll có sẵn trong window hỗ trợ k cần đính kèm, nhưng khi xuất ra vẫn chỉ có 1 exe đáp sang máy win khác chạy vẫn đc -> static file exe sẽ nặng hơn.
-
--> Pb: file exe là tập tin cài đặt và chạy ứng dụng windows do ta tự tay tùy chỉnh
-file msi(microsoft installer) khi cài đặt ứng dụng window thì ta k cần làm gì trong quá trình cài đặt 
-File .exe cho phép kiểm soát hoàn toàn quá trình cấu hình ứng dụng là loại file thường chọn để tải
-Chỉ có thể cài đặt một file .msi 1 lúc trong khi có thể cài đặt nhiều file .exe cùng lúc
-
--> Phân biệt: Windows là 1 họ hệ điều hành với nh phiên bản và công dụng khác nhau, trong đó nổi bật là window desktop và window server. 
-Window Server là 1 nhánh của hệ điều hành máy chủ của microsoft, thường dùng làm các server. Nó thích hợp các lập trình cơ sở dữ liệu như Access, MSSQL.
-Window Desktop là Ct phần mềm máy tính quản lý phần cứng tài nguyên máy tính, cung cấp môi trường làm vc như máy tính của ta bh đang dùng
-
+# Other
 -> VD: khi tạo ra 1 plugin SDK mà bên trong ta dùng 1 cái thư viện rất lớn bên thứ 3, VD zlib thì mỗi lần compile thì nó sẽ compile lại toàn bộ zlib bị lâu. Vì khi chạy xong thư viện thì cx chỉ tạo ra dll là cùng nên có thể viết trong file pro (makefile) là nếu file dll tồn tại thì sẽ k build lại nó nx. 
 
 -> Qt6 compile dùng build system là CMake thay cho qmake. CMake và qmake là 1 system quản lý quá trình build, tạo makefile.
@@ -232,7 +209,7 @@ Cách thêm 1 thư viện dll bên ngoài vào trong Qt: Ta tải nguồn của 
 *
 **/ cx chính là vc tạo ra doxygen, nó phục vụ cho tính năng rê chuột và F1.
 
--> Phân biệt các kiểu cast:
+-> Phân biệt các kiểu cast C++
 - (type)object và type(object) là C-style cast, nó giống như ép kiểu ngầm định nhưng ta thực hiện nó không ngầm định mà thôi. Đương nhiên là kiểu cast nó phải chuẩn.
 - static_cast<type>(object) là kiểu cast đơn giản nhất thực hiện lúc compile time, nó dùng mạnh hơn kiểu cast trc. Nó có thể dùng để cast class với điều kiện kế thừa, k thể dùng cast sang 1 class khác biệt ht. 
 - dynamic_cast dùng cast xuyên class, lên or xuống khi kế thừa, nó sẽ cố tìm object để cast nếu có thể -> vẫn có thể k cast đc khi class khác trả về std::bad_cast
